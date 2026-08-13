@@ -19,11 +19,15 @@
       : 'chatgpt';
 
   let autoDetect = true;
-  chrome.storage.sync.get(['autoDetect'], (r) => {
+  let contextTurns = 6; // 標記寫入時一併收錄的對話則數（0 = 只收摘要）
+  chrome.storage.sync.get(['autoDetect', 'contextTurns'], (r) => {
     autoDetect = r.autoDetect !== false;
+    if (typeof r.contextTurns === 'number') contextTurns = r.contextTurns;
   });
   chrome.storage.onChanged.addListener((ch, area) => {
-    if (area === 'sync' && ch.autoDetect) autoDetect = ch.autoDetect.newValue !== false;
+    if (area !== 'sync') return;
+    if (ch.autoDetect) autoDetect = ch.autoDetect.newValue !== false;
+    if (ch.contextTurns) contextTurns = ch.contextTurns.newValue;
   });
 
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
@@ -53,12 +57,14 @@
     return false;
   });
 
-  function fullTranscript() {
+  function fullTranscript(lastN) {
     const cfg = TURNS[platform];
-    const els = [...document.querySelectorAll(cfg.selector)];
+    let els = [...document.querySelectorAll(cfg.selector)];
+    if (lastN > 0) els = els.slice(-lastN);
     const aiName = { chatgpt: 'ChatGPT', claude: 'Claude', gemini: 'Gemini' }[platform];
     // 平台改版導致抓不到任何一輪時，至少把整頁可讀文字收下來，不要空手而回
     if (!els.length) {
+      if (lastN > 0) return '';
       const main = document.querySelector('main') || document.body;
       return readableText(main).replace(/\n{3,}/g, '\n\n').trim();
     }
@@ -115,6 +121,7 @@
         const captured = text;
         removeSelBtn();
         sendCapture(captured, 'selection');
+
       });
       document.body.appendChild(selBtn);
     }, 10);
@@ -227,14 +234,41 @@
     firstScan = false;
   }
 
-  // 標記內容是 JSON 就整理成條列，不是就原樣收
+  // 標記內容是 JSON 就整理成條列，不是就原樣收。
+  // 已知欄位照順序排版，沒列到的欄位也要收下來（prompt 可能被使用者改寫）。
+  const FIELDS = [
+    ['summary', '總結'],
+    ['background', '背景'],
+    ['key_points', '重點'],
+    ['quotes', '原話'],
+    ['decision', '決定'],
+    ['open_questions', '待解'],
+    ['next_steps', '下一步'],
+  ];
+
+  function renderField(label, val) {
+    if (Array.isArray(val)) {
+      if (!val.length) return '';
+      return `【${label}】\n${val.map((v) => `・${v}`).join('\n')}`;
+    }
+    return val ? `【${label}】${val}` : '';
+  }
+
   function formatBlock(raw) {
     try {
       const j = JSON.parse(raw);
+      const done = new Set();
       const lines = [];
-      if (j.summary) lines.push(`【總結】${j.summary}`);
-      if (Array.isArray(j.key_points)) lines.push(...j.key_points.map((k) => `・${k}`));
-      if (j.decision) lines.push(`【決定】${j.decision}`);
+      for (const [key, label] of FIELDS) {
+        done.add(key);
+        const s = renderField(label, j[key]);
+        if (s) lines.push(s);
+      }
+      for (const [key, val] of Object.entries(j)) {
+        if (done.has(key)) continue;
+        const s = renderField(key, val);
+        if (s) lines.push(s);
+      }
       return lines.length ? lines.join('\n') : raw;
     } catch (_) {
       return raw;
@@ -352,7 +386,12 @@
     okBtn.textContent = '✅ 寫入脈絡 Doc';
     okBtn.addEventListener('click', () => {
       dismiss();
-      sendCapture(text, 'marker');
+      // 摘要是索引，原文才是脈絡：一併附上最近幾輪對話
+      const ctx = contextTurns > 0 ? fullTranscript(contextTurns) : '';
+      const body = ctx
+        ? `${text}\n\n──── 對話原文（最近 ${contextTurns} 則）────\n${ctx}`
+        : text;
+      sendCapture(body, 'marker');
     });
     const noBtn = document.createElement('button');
     noBtn.type = 'button';

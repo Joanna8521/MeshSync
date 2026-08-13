@@ -4,9 +4,17 @@
 const $ = (id) => document.getElementById(id);
 
 const PROMPT_SNIPPET = `當我說「記錄脈絡」或這段討論產生重要結論時，
-請在回覆的最後面輸出這個區塊（原樣輸出，不要解釋）：
+請在回覆的最後面輸出這個區塊（原樣輸出，不要解釋）。
+請寫得具體：key_points 五到八條，寫出「為什麼」與推導過程，不要只寫結論標題；
+quotes 摘錄我原話裡最關鍵的句子。
 [CONTEXT]
-{"summary":"一句話總結","key_points":["重點1","重點2"],"decision":"做了什麼決定"}
+{"summary":"一句話總結",
+ "background":"這段討論的來龍去脈、從哪裡開始的",
+ "key_points":["具體重點，含理由或推導","..."],
+ "quotes":["使用者的關鍵原話"],
+ "decision":"做了什麼決定",
+ "open_questions":["還沒解決的問題"],
+ "next_steps":["下一步要做什麼"]}
 [/CONTEXT]`;
 
 let profiles = [];
@@ -18,12 +26,13 @@ document.addEventListener('DOMContentLoaded', init);
 async function init() {
   $('promptText').value = PROMPT_SNIPPET;
 
-  const s = await chrome.storage.sync.get(['profiles', 'activeProfileId', 'autoDetect']);
+  const s = await chrome.storage.sync.get(['profiles', 'activeProfileId', 'autoDetect', 'contextTurns']);
   profiles = Array.isArray(s.profiles) && s.profiles.length
     ? s.profiles
     : [{ id: 'default', name: '自用', folderName: 'Mesh Sync 脈絡紀錄' }];
   activeId = profiles.some((p) => p.id === s.activeProfileId) ? s.activeProfileId : profiles[0].id;
   $('autoDetect').checked = s.autoDetect !== false;
+  $('contextTurns').value = String(typeof s.contextTurns === 'number' ? s.contextTurns : 6);
 
   renderProfiles();
   renderProfileFields();
@@ -40,6 +49,7 @@ async function init() {
   $('delBtn').addEventListener('click', delProfile);
   $('saveBtn').addEventListener('click', saveProfile);
   $('autoDetect').addEventListener('change', saveAutoDetect);
+  $('contextTurns').addEventListener('change', saveContextTurns);
   $('copyPrompt').addEventListener('click', copyPrompt);
   $('captureAll').addEventListener('click', captureAll);
   $('diagBtn').addEventListener('click', runDiag);
@@ -256,6 +266,12 @@ function saveProfile() {
 
 function saveAutoDetect() {
   chrome.storage.sync.set({ autoDetect: $('autoDetect').checked }, () => {
+    if (chrome.runtime.lastError) setMsg('saveMsg', 'err', chrome.runtime.lastError.message);
+  });
+}
+
+function saveContextTurns() {
+  chrome.storage.sync.set({ contextTurns: Number($('contextTurns').value) }, () => {
     if (chrome.runtime.lastError) setMsg('saveMsg', 'err', chrome.runtime.lastError.message);
   });
 }

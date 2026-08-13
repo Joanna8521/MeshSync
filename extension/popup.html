@@ -132,6 +132,14 @@
     <span>自動偵測 [CONTEXT]/[SYNC] 標記</span>
     <input type="checkbox" id="autoDetect" checked>
   </div>
+  <label class="small" style="display:block; margin-top:10px">寫入標記時一併收錄對話原文</label>
+  <select id="contextTurns">
+    <option value="0">只收摘要</option>
+    <option value="4">最近 4 則</option>
+    <option value="6">最近 6 則</option>
+    <option value="12">最近 12 則</option>
+  </select>
+  <div class="hint">摘要是索引，原文才是脈絡。收錄的是標記前的問答內容。</div>
 </section>
 
 <section>
