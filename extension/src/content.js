@@ -10,6 +10,9 @@
 (function () {
   'use strict';
 
+  // 診斷用：頁面上看得到這個屬性，就代表 content script 真的有被注入
+  document.documentElement.dataset.meshSync = '3.0.0';
+
   const host = location.hostname;
   const platform = host.includes('claude.ai') ? 'claude'
     : host.includes('gemini.google.com') ? 'gemini'
@@ -23,8 +26,22 @@
     if (area === 'sync' && ch.autoDetect) autoDetect = ch.autoDetect.newValue !== false;
   });
 
-  // 來自 popup 的「收錄整場對話」
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+    // 診斷：讓程式自己交出證據，不用開主控台猜
+    if (msg.type === 'MESH_DIAG') {
+      const els = assistantEls();
+      const turns = document.querySelectorAll(TURNS[platform].selector).length;
+      sendResponse({
+        platform,
+        assistant: els.length,
+        turns,
+        hasMarker: /\[(CONTEXT|SYNC)\]/.test(readableText(document.body)),
+        seen: seen.size,
+        autoDetect,
+      });
+      return false;
+    }
+
     if (msg.type !== 'MESH_CAPTURE_ALL') return false;
     const text = fullTranscript();
     if (!text) {
@@ -62,8 +79,10 @@
   }
 
   function convTitle() {
+    // 各平台的後綴寫法不同：「- ChatGPT」「– Google Gemini」「\ Claude」…
     return (document.title || '')
-      .replace(/\s*[-–—|]\s*(ChatGPT|Claude|Gemini)\s*$/i, '')
+      .replace(/\s*[-–—|\\]\s*(Google\s+)?(ChatGPT|Claude|Gemini)\s*$/i, '')
+      .replace(/\s*[-–—|\\]\s*(Google\s+)?(ChatGPT|Claude|Gemini)\s*$/i, '')
       .trim();
   }
 

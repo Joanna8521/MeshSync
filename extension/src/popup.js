@@ -42,6 +42,31 @@ async function init() {
   $('autoDetect').addEventListener('change', saveAutoDetect);
   $('copyPrompt').addEventListener('click', copyPrompt);
   $('captureAll').addEventListener('click', captureAll);
+  $('diagBtn').addEventListener('click', runDiag);
+}
+
+// ── 分頁診斷 ──────────────────────────────────────
+
+function runDiag() {
+  setMsg('diagMsg', '', '檢查中…');
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    const tab = tabs && tabs[0];
+    if (!tab || !SUPPORTED.test(tab.url || '')) {
+      setMsg('diagMsg', 'err', '目前分頁不是 ChatGPT / Claude / Gemini');
+      return;
+    }
+    chrome.tabs.sendMessage(tab.id, { type: 'MESH_DIAG' }, (r) => {
+      if (chrome.runtime.lastError || !r) {
+        setMsg('diagMsg', 'err', '未注入：請重整這個分頁；若仍失敗，到 chrome://extensions 確認此網站的存取權已開啟');
+        return;
+      }
+      const cls = r.assistant > 0 || r.hasMarker ? 'ok' : 'err';
+      setMsg('diagMsg', cls,
+        `${r.platform}｜訊息 ${r.assistant} 則・對話輪 ${r.turns}｜`
+        + `頁面${r.hasMarker ? '有' : '沒有'}標記｜已處理 ${r.seen}｜`
+        + `自動偵測${r.autoDetect ? '開' : '關'}`);
+    });
+  });
 }
 
 // ── 收錄整場對話 ──────────────────────────────────
