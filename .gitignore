@@ -2,3 +2,6 @@
 key.pem
 .DS_Store
 .claude/
+
+# 打包檔不進版控
+*.zip
