@@ -290,6 +290,11 @@ function sanitizeName(s) {
 function cleanText(s) {
   return String(s || '')
     .replace(/\r/g, '')
+    // 破折號一律改成逗號（分隔線用的 ─ ━ 是不同字元，不受影響）
+    .replace(/\s*—+\s*/g, '，')
+    .replace(/，{2,}/g, '，')
+    .replace(/，(?=[。！？；、，\n])/g, '')
+    .replace(/，$/gm, '')
     .replace(/[\u0000-\u0008\u000B-\u001F\u007F]/g, '')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
