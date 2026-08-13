@@ -278,7 +278,7 @@
   // ── 寫入 ─────────────────────────────────────────
 
   function sendCapture(text, source) {
-    showStatusToast('⏳ 寫入中…', null, 0);
+    showStatusToast(`⏳ 寫入中…（${text.length.toLocaleString()} 字）`, null, 0);
     chrome.runtime.sendMessage({
       type: 'MESH_CAPTURE',
       payload: { text, source, platform, convUrl: convUrl(), title: convTitle() },
@@ -288,7 +288,7 @@
         return;
       }
       if (res && res.ok) {
-        showStatusToast(`✅ 已寫入「${res.docName}」`, res.docUrl, 6000);
+        showStatusToast(`✅ 已寫入「${res.docName}」・${text.length.toLocaleString()} 字`, res.docUrl, 30000);
       } else {
         showStatusToast(`❌ 寫入失敗：${(res && res.error) || '未知錯誤'}`, null, 8000);
       }
@@ -375,8 +375,16 @@
 
     const preview = document.createElement('div');
     preview.className = 'mesh-toast-preview';
-    preview.textContent = text.length > 160 ? `${text.slice(0, 160)}…` : text;
+    preview.textContent = text.length > 800 ? `${text.slice(0, 800)}…` : text;
     el.appendChild(preview);
+
+    // 讓使用者按下去之前就知道會一起寫入什麼
+    const plan = document.createElement('div');
+    plan.className = 'mesh-toast-plan';
+    plan.textContent = contextTurns === 0
+      ? '只寫入上面的摘要（可在 popup 改成一併收錄原文）'
+      : `＋ 一併收錄對話原文（${contextTurns < 0 ? '整場全文' : `最近 ${contextTurns} 則`}）`;
+    el.appendChild(plan);
 
     const row = document.createElement('div');
     row.className = 'mesh-toast-actions';
