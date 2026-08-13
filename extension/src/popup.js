@@ -123,7 +123,8 @@ function testFocus4ai() {
     try {
       const res = await fetch(`${origin}/api/version`, { credentials: 'include' });
       if (res.status === 401 || res.status === 403) {
-        setMsg('f4Msg', 'err', '需要登入：請先用同一個瀏覽器登入該站台，再測一次');
+        setMsg('f4Msg', 'err', '尚未登入（或登入已過期），同步會失敗。');
+        addMsgLink('f4Msg', `${origin}/login`, '去登入 ↗');
         return;
       }
       if (!res.ok) {
@@ -132,7 +133,8 @@ function testFocus4ai() {
       }
       // 被導到登入頁會拿到 200 + HTML，不能當成連線成功
       if (!(res.headers.get('content-type') || '').includes('application/json')) {
-        setMsg('f4Msg', 'err', '連得上但回的不是 API，通常是被導到登入頁；請先登入該站台');
+        setMsg('f4Msg', 'err', '尚未登入（或登入已過期），同步會失敗。');
+        addMsgLink('f4Msg', `${origin}/login`, '去登入 ↗');
         return;
       }
       const j = await res.json();
@@ -414,6 +416,18 @@ function fmtTime(ts) {
   const d = new Date(ts);
   const p = (n) => String(n).padStart(2, '0');
   return `${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+// 錯誤訊息要能直接動手解決，不是只告訴使用者哪裡不對
+function addMsgLink(id, href, label) {
+  const el = $(id);
+  el.appendChild(document.createTextNode(' '));
+  const a = document.createElement('a');
+  a.href = href;
+  a.target = '_blank';
+  a.rel = 'noopener';
+  a.textContent = label;
+  el.appendChild(a);
 }
 
 function setMsg(id, cls, text) {
