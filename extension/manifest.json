@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Mesh Sync — AI 對話脈絡收藏器",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "擷取 ChatGPT / Claude / Gemini 的重要討論片段，寫入你自己 Google Drive 的指定資料夾。一場對話一份 Doc，底部附原始討論連結。",
   "permissions": [
     "storage",
