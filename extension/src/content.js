@@ -19,7 +19,7 @@
       : 'chatgpt';
 
   let autoDetect = true;
-  let contextTurns = 6; // 標記寫入時一併收錄的對話則數（0 = 只收摘要）
+  let contextTurns = 6; // 標記寫入時一併收錄的對話則數（0 = 只收摘要，-1 = 整場全文）
   chrome.storage.sync.get(['autoDetect', 'contextTurns'], (r) => {
     autoDetect = r.autoDetect !== false;
     if (typeof r.contextTurns === 'number') contextTurns = r.contextTurns;
@@ -386,11 +386,11 @@
     okBtn.textContent = '✅ 寫入脈絡 Doc';
     okBtn.addEventListener('click', () => {
       dismiss();
-      // 摘要是索引，原文才是脈絡：一併附上最近幾輪對話
-      const ctx = contextTurns > 0 ? fullTranscript(contextTurns) : '';
-      const body = ctx
-        ? `${text}\n\n──── 對話原文（最近 ${contextTurns} 則）────\n${ctx}`
-        : text;
+      // 摘要是索引，原文才是脈絡：一併附上對話原文（-1 = 整場全文）
+      const all = contextTurns < 0;
+      const ctx = contextTurns === 0 ? '' : fullTranscript(all ? 0 : contextTurns);
+      const label = all ? '整場' : `最近 ${contextTurns} 則`;
+      const body = ctx ? `${text}\n\n──── 對話原文（${label}）────\n${ctx}` : text;
       sendCapture(body, 'marker');
     });
     const noBtn = document.createElement('button');
