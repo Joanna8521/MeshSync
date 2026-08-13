@@ -141,6 +141,10 @@ async function doCapture(token, p) {
 // Drive 是給人看的，知識庫是給檢索用的。這條路失敗不能影響主功能，
 // 但要把原因回報出來，不能安靜地什麼都沒發生。
 
+function isJson(res) {
+  return (res.headers.get('content-type') || '').includes('application/json');
+}
+
 function mdEscape(s) {
   return String(s || '').replace(/"/g, "'").replace(/\n/g, ' ').trim();
 }
@@ -157,8 +161,10 @@ async function syncToFocus4ai(p, docName) {
   // 先讀回既有內容，才能累加而不是覆蓋（同一場對話會寫很多次）
   let existing = '';
   try {
-    const res = await fetch(`${base}/api/doc?path=${encodeURIComponent(path)}`);
-    if (res.ok) existing = (await res.json()).content || '';
+    const res = await fetch(`${base}/api/doc?path=${encodeURIComponent(path)}`, {
+      credentials: 'include',
+    });
+    if (res.ok && isJson(res)) existing = (await res.json()).content || '';
   } catch (_) { /* 404 或第一次寫入，正常 */ }
 
   const stamp = dateTimeStr();
@@ -193,12 +199,18 @@ async function syncToFocus4ai(p, docName) {
   const res = await fetch(url, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include', // 站台有登入牆時要帶著使用者自己的 session
     body: JSON.stringify({ content: out }),
   });
   if (!res.ok) {
     let detail = '';
     try { detail = (await res.json()).detail || ''; } catch (_) { /* 非 JSON */ }
     throw new Error(`Focus4ai ${res.status}：${detail || res.statusText || '寫入失敗'}`);
+  }
+  // 被導到登入頁時會拿到 200 + HTML。不擋的話會謊報成功，
+  // 而使用者要過很久才發現知識庫裡什麼都沒有。
+  if (!isJson(res)) {
+    throw new Error('回應不是 JSON，通常代表被導到登入頁；請先在瀏覽器登入該站台再試');
   }
   const j = await res.json();
   return { path, chunks: j.chunks };

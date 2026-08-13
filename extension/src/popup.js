@@ -114,15 +114,24 @@ function testFocus4ai() {
   setMsg('f4Msg', '', '測試中…');
   ensureHostPermission(async (origin) => {
     try {
-      const res = await fetch(`${origin}/api/version`);
+      const res = await fetch(`${origin}/api/version`, { credentials: 'include' });
+      if (res.status === 401 || res.status === 403) {
+        setMsg('f4Msg', 'err', '需要登入：請先用同一個瀏覽器登入該站台，再測一次');
+        return;
+      }
       if (!res.ok) {
         setMsg('f4Msg', 'err', `連得上但回 ${res.status}，確認網址是 Focus4ai 的根位址`);
+        return;
+      }
+      // 被導到登入頁會拿到 200 + HTML，不能當成連線成功
+      if (!(res.headers.get('content-type') || '').includes('application/json')) {
+        setMsg('f4Msg', 'err', '連得上但回的不是 API，通常是被導到登入頁；請先登入該站台');
         return;
       }
       const j = await res.json();
       setMsg('f4Msg', 'ok', `✅ 連上 Focus4ai${j.version ? ` v${j.version}` : ''}`);
     } catch (e) {
-      setMsg('f4Msg', 'err', `連不上：${e.message || '請確認服務有在跑'}`);
+      setMsg('f4Msg', 'err', `連不上：${e.message || '請確認服務有在跑、網址含 https://'}`);
     }
   });
 }
