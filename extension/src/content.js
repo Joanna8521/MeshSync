@@ -40,6 +40,11 @@
     const cfg = TURNS[platform];
     const els = [...document.querySelectorAll(cfg.selector)];
     const aiName = { chatgpt: 'ChatGPT', claude: 'Claude', gemini: 'Gemini' }[platform];
+    // 平台改版導致抓不到任何一輪時，至少把整頁可讀文字收下來，不要空手而回
+    if (!els.length) {
+      const main = document.querySelector('main') || document.body;
+      return readableText(main).replace(/\n{3,}/g, '\n\n').trim();
+    }
     const parts = [];
     for (const el of els) {
       // 標記區塊是給程式看的，收進逐字紀錄只會佔版面
@@ -103,11 +108,13 @@
   // ── 模式二：[CONTEXT]/[SYNC] 標記自動偵測 ──────────
 
   const seen = new Set();
-  const BLOCK_RE = /\[(CONTEXT|SYNC)\]([\s\S]*?)\[\/\1\]/g;
+  // 內容中不得再出現開頭標記，否則 AI 在說明文字裡提到「[CONTEXT]」時，
+  // 比對會從那個裸標記一路吃到結束標記，把中間的白話文一起收進來。
+  const BLOCK_RE = /\[(CONTEXT|SYNC)\]((?:(?!\[(?:CONTEXT|SYNC)\])[\s\S])*?)\[\/\1\]/g;
 
   const SELECTORS = {
     chatgpt: '[data-message-author-role="assistant"] .markdown',
-    claude: '[data-testid="message-content"], .font-claude-message',
+    claude: '[data-testid="assistant-message"], .font-claude-message, [data-testid="message-content"], [data-is-streaming] .prose',
     gemini: 'model-response, .model-response-text, message-content',
   };
 
@@ -118,7 +125,7 @@
       isUser: (el) => el.getAttribute('data-message-author-role') === 'user',
     },
     claude: {
-      selector: '[data-testid="user-message"], .font-claude-message',
+      selector: '[data-testid="user-message"], [data-testid="assistant-message"], .font-claude-message',
       isUser: (el) => el.matches('[data-testid="user-message"]'),
     },
     gemini: {
@@ -129,6 +136,24 @@
 
   function assistantEls() {
     return [...document.querySelectorAll(SELECTORS[platform])];
+  }
+
+  // 後備：平台改版導致 selector 全部落空時，直接掃整頁文字。
+  // 必須排除輸入框（contenteditable）與自己的 UI，否則使用者「正在打字」
+  // 的 prompt 會被當成 AI 的輸出。
+  function readableText(root) {
+    const EXCLUDE = '[contenteditable="true"], textarea, input, script, style, .mesh-toast, .mesh-capture-btn';
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode(node) {
+        const p = node.parentElement;
+        if (!p || p.closest(EXCLUDE)) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    });
+    const out = [];
+    let n;
+    while ((n = walker.nextNode())) out.push(n.nodeValue);
+    return out.join('\n');
   }
 
   // prompt 裡的示範格式會被 AI 複述，別把它當成真的脈絡
@@ -154,23 +179,31 @@
   // 其餘標記為已看過但不跳卡片，否則重整一次就跳出一整排舊卡。
   let firstScan = true;
 
+  function collectBlocks(text, allowToast) {
+    BLOCK_RE.lastIndex = 0;
+    let m;
+    while ((m = BLOCK_RE.exec(text)) !== null) {
+      const raw = m[2].trim();
+      if (!raw) continue;
+      const key = hashStr(`${convUrl()}|${raw}`);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      if (isTemplate(raw)) continue;
+      if (allowToast) showConfirmToast(formatBlock(raw));
+    }
+  }
+
   function scan() {
     const els = assistantEls();
+    if (!els.length) {
+      // 平台改版：整頁掃描。第一輪只建立基準，不跳卡片。
+      collectBlocks(readableText(document.body), !firstScan);
+      firstScan = false;
+      return;
+    }
     const lastIdx = els.length - 1;
     els.forEach((el, idx) => {
-      const text = el.innerText || '';
-      BLOCK_RE.lastIndex = 0;
-      let m;
-      while ((m = BLOCK_RE.exec(text)) !== null) {
-        const raw = m[2].trim();
-        if (!raw) continue;
-        const key = hashStr(`${convUrl()}|${raw}`);
-        if (seen.has(key)) continue;
-        seen.add(key);
-        if (isTemplate(raw)) continue;
-        if (firstScan && idx !== lastIdx) continue;
-        showConfirmToast(formatBlock(raw));
-      }
+      collectBlocks(el.innerText || '', !firstScan || idx === lastIdx);
     });
     firstScan = false;
   }
