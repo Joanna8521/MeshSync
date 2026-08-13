@@ -18,6 +18,9 @@ quotes 摘錄我原話裡最關鍵的句子。
  "next_steps":["下一步要做什麼"]}
 [/CONTEXT]`;
 
+const F4_DEFAULT_BASE = 'https://app.focus4ai.com';
+const F4_DEFAULT_FOLDER = '00_inbox/mesh-sync';
+
 let profiles = [];
 let activeId = null;
 let delArmed = false;
@@ -36,8 +39,10 @@ async function init() {
   $('autoDetect').checked = s.autoDetect !== false;
   $('contextTurns').value = String(typeof s.contextTurns === 'number' ? s.contextTurns : 6);
   $('f4Enabled').checked = !!s.f4Enabled;
-  $('f4Base').value = s.f4Base || '';
-  $('f4Folder').value = s.f4Folder || '';
+  // 預留文字是灰的、按下去還是空的。線上站台就是這個位址，直接填好，
+  // 自架的人再改掉即可。
+  $('f4Base').value = s.f4Base || F4_DEFAULT_BASE;
+  $('f4Folder').value = s.f4Folder || F4_DEFAULT_FOLDER;
   $('f4Private').checked = s.f4Private !== false;
 
   renderProfiles();
