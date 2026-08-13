@@ -1,0 +1,58 @@
+{
+  "manifest_version": 3,
+  "name": "Mesh Sync — AI 對話脈絡收藏器",
+  "version": "3.0.0",
+  "description": "擷取 ChatGPT / Claude / Gemini 的重要討論片段，寫入你自己 Google Drive 的指定資料夾。一場對話一份 Doc，底部附原始討論連結。",
+  "permissions": [
+    "storage",
+    "identity"
+  ],
+  "host_permissions": [
+    "https://chatgpt.com/*",
+    "https://chat.openai.com/*",
+    "https://claude.ai/*",
+    "https://gemini.google.com/*",
+    "https://www.googleapis.com/*",
+    "https://docs.googleapis.com/*"
+  ],
+  "oauth2": {
+    "client_id": "YOUR_CLIENT_ID.apps.googleusercontent.com",
+    "scopes": [
+      "https://www.googleapis.com/auth/drive.file"
+    ]
+  },
+  "background": {
+    "service_worker": "src/background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*",
+        "https://claude.ai/*",
+        "https://gemini.google.com/*"
+      ],
+      "js": [
+        "src/content.js"
+      ],
+      "css": [
+        "src/toast.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtJ7i5vcC9qlt4koSNcCmlPQDBA7TNhxixCFF+b7iHDEKbMK66asPTaUgl7qR6Dy4ANLpvoctwH44kKpOFqdiK2EzlXOkt4UwkIqSJtyzG8CBFYZc1HJXj0mxa6hjH97TkyMC1GqDLjPGSHIk9cKhsTN3ipbby9EEH9M+kwaGkFZLWMYdC/B9dewlTv93iLHk3LwScx8pI5Ka8Vy2Te4gZwZgeueo2xjIrjaeeRk7wNNwxUBRVPVd13/aL/fBrvOswbw83U+n3M3YSPDj45iDSwWEYIdqriMLtdk31BRLnEsc2W1oB9HR9s3OO8+vvOupawj2H3smiOiocEKKMZYTeQIDAQAB"
+}

@@ -1,0 +1,233 @@
+// =====================================================
+// Mesh Sync — Content Script v3.0（開源版）
+// 兩種擷取方式：
+// 1) 圈選文字 → 浮動「存入脈絡」按鈕
+// 2) AI 回覆中的 [CONTEXT]/[SYNC] 標記 → 確認卡
+// 支援 ChatGPT / Claude / Gemini
+// 安全原則：所有頁面資料一律用 textContent 塞進 DOM，不走 innerHTML
+// =====================================================
+
+(function () {
+  'use strict';
+
+  const host = location.hostname;
+  const platform = host.includes('claude.ai') ? 'claude'
+    : host.includes('gemini.google.com') ? 'gemini'
+      : 'chatgpt';
+
+  let autoDetect = true;
+  chrome.storage.sync.get(['autoDetect'], (r) => {
+    autoDetect = r.autoDetect !== false;
+  });
+  chrome.storage.onChanged.addListener((ch, area) => {
+    if (area === 'sync' && ch.autoDetect) autoDetect = ch.autoDetect.newValue !== false;
+  });
+
+  // ── 對話資訊 ──────────────────────────────────────
+
+  function convUrl() {
+    return location.origin + location.pathname; // 去掉 query/hash
+  }
+
+  function convTitle() {
+    return (document.title || '')
+      .replace(/\s*[-–—|]\s*(ChatGPT|Claude|Gemini)\s*$/i, '')
+      .trim();
+  }
+
+  // ── 模式一：圈選文字 → 浮動按鈕 ────────────────────
+
+  let selBtn = null;
+
+  function removeSelBtn() {
+    if (selBtn) {
+      selBtn.remove();
+      selBtn = null;
+    }
+  }
+
+  document.addEventListener('mouseup', (ev) => {
+    if (selBtn && selBtn.contains(ev.target)) return;
+    setTimeout(() => {
+      removeSelBtn();
+      const sel = window.getSelection();
+      const text = sel ? sel.toString().trim() : '';
+      if (text.length < 10 || sel.rangeCount === 0) return;
+      const rect = sel.getRangeAt(0).getBoundingClientRect();
+      selBtn = document.createElement('button');
+      selBtn.type = 'button';
+      selBtn.className = 'mesh-capture-btn';
+      selBtn.textContent = '⚡ 存入脈絡';
+      selBtn.style.top = `${window.scrollY + rect.bottom + 8}px`;
+      selBtn.style.left = `${window.scrollX + Math.max(rect.left, 8)}px`;
+      selBtn.addEventListener('click', () => {
+        const captured = text;
+        removeSelBtn();
+        sendCapture(captured, 'selection');
+      });
+      document.body.appendChild(selBtn);
+    }, 10);
+  });
+
+  document.addEventListener('mousedown', (ev) => {
+    if (selBtn && !selBtn.contains(ev.target)) removeSelBtn();
+  });
+
+  // ── 模式二：[CONTEXT]/[SYNC] 標記自動偵測 ──────────
+
+  const seen = new Set();
+  const BLOCK_RE = /\[(CONTEXT|SYNC)\]([\s\S]*?)\[\/\1\]/g;
+
+  const SELECTORS = {
+    chatgpt: '[data-message-author-role="assistant"] .markdown',
+    claude: '[data-testid="message-content"], .font-claude-message',
+    gemini: 'model-response, .model-response-text, message-content',
+  };
+
+  function assistantText() {
+    const els = document.querySelectorAll(SELECTORS[platform]);
+    return [...els].map((el) => el.innerText || '').join('\n');
+  }
+
+  function hashStr(str) {
+    let h = 0;
+    for (let i = 0; i < str.length; i++) h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
+    return h.toString(36);
+  }
+
+  let scanTimer = null;
+  const observer = new MutationObserver(() => {
+    if (!autoDetect) return;
+    clearTimeout(scanTimer);
+    scanTimer = setTimeout(scan, 1200);
+  });
+  observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+
+  function scan() {
+    const all = assistantText();
+    BLOCK_RE.lastIndex = 0;
+    let m;
+    while ((m = BLOCK_RE.exec(all)) !== null) {
+      const raw = m[2].trim();
+      if (!raw) continue;
+      const key = hashStr(`${convUrl()}|${raw}`);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      showConfirmToast(formatBlock(raw));
+    }
+  }
+
+  // 標記內容是 JSON 就整理成條列，不是就原樣收
+  function formatBlock(raw) {
+    try {
+      const j = JSON.parse(raw);
+      const lines = [];
+      if (j.summary) lines.push(`【總結】${j.summary}`);
+      if (Array.isArray(j.key_points)) lines.push(...j.key_points.map((k) => `・${k}`));
+      if (j.decision) lines.push(`【決定】${j.decision}`);
+      return lines.length ? lines.join('\n') : raw;
+    } catch (_) {
+      return raw;
+    }
+  }
+
+  // ── 寫入 ─────────────────────────────────────────
+
+  function sendCapture(text, source) {
+    showStatusToast('⏳ 寫入中…', null, 0);
+    chrome.runtime.sendMessage({
+      type: 'MESH_CAPTURE',
+      payload: { text, source, platform, convUrl: convUrl(), title: convTitle() },
+    }, (res) => {
+      if (chrome.runtime.lastError) {
+        showStatusToast(`❌ ${chrome.runtime.lastError.message}`, null, 8000);
+        return;
+      }
+      if (res && res.ok) {
+        showStatusToast(`✅ 已寫入「${res.docName}」`, res.docUrl, 6000);
+      } else {
+        showStatusToast(`❌ 寫入失敗：${(res && res.error) || '未知錯誤'}`, null, 8000);
+      }
+    });
+  }
+
+  // ── Toast ────────────────────────────────────────
+
+  let statusToast = null;
+  let confirmToasts = [];
+
+  function baseToast(cls) {
+    const el = document.createElement('div');
+    el.className = `mesh-toast ${cls}`;
+    document.body.appendChild(el);
+    return el;
+  }
+
+  function showStatusToast(msg, docUrl, autoHideMs) {
+    if (statusToast) statusToast.remove();
+    statusToast = baseToast('mesh-status');
+    const span = document.createElement('span');
+    span.textContent = msg;
+    statusToast.appendChild(span);
+    if (docUrl) {
+      const a = document.createElement('a');
+      a.className = 'mesh-doc-link';
+      a.textContent = '開啟 Doc ↗';
+      a.href = docUrl;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      statusToast.appendChild(a);
+    }
+    if (autoHideMs > 0) {
+      const me = statusToast;
+      setTimeout(() => {
+        if (statusToast === me) {
+          me.remove();
+          statusToast = null;
+        }
+      }, autoHideMs);
+    }
+  }
+
+  function showConfirmToast(text) {
+    // 最多同時三張，舊的先收
+    while (confirmToasts.length >= 3) confirmToasts.shift().remove();
+    const el = baseToast('mesh-sync');
+    confirmToasts.push(el);
+
+    const title = document.createElement('div');
+    title.className = 'mesh-toast-title';
+    title.textContent = '⚡ Mesh Sync 偵測到脈絡標記';
+    el.appendChild(title);
+
+    const preview = document.createElement('div');
+    preview.className = 'mesh-toast-preview';
+    preview.textContent = text.length > 160 ? `${text.slice(0, 160)}…` : text;
+    el.appendChild(preview);
+
+    const row = document.createElement('div');
+    row.className = 'mesh-toast-actions';
+    const okBtn = document.createElement('button');
+    okBtn.type = 'button';
+    okBtn.className = 'mesh-btn mesh-btn-primary';
+    okBtn.textContent = '✅ 寫入脈絡 Doc';
+    okBtn.addEventListener('click', () => {
+      dismiss();
+      sendCapture(text, 'marker');
+    });
+    const noBtn = document.createElement('button');
+    noBtn.type = 'button';
+    noBtn.className = 'mesh-btn';
+    noBtn.textContent = '略過';
+    noBtn.addEventListener('click', dismiss);
+    row.appendChild(okBtn);
+    row.appendChild(noBtn);
+    el.appendChild(row);
+
+    function dismiss() {
+      el.remove();
+      confirmToasts = confirmToasts.filter((t) => t !== el);
+    }
+    setTimeout(dismiss, 60000);
+  }
+})();

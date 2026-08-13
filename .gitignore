@@ -1,0 +1,4 @@
+# 打包 .crx 用的私鑰，不進版控（manifest 裡的 key 是公鑰，公開沒問題）
+key.pem
+.DS_Store
+.claude/

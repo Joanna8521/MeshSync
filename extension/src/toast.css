@@ -1,0 +1,89 @@
+/* Mesh Sync v3.0 — 頁面內 UI（Toast 與圈選按鈕） */
+
+.mesh-toast {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 2147483646;
+  max-width: 360px;
+  background: #ffffff;
+  color: #1f2937;
+  border: 1px solid #e5e7eb;
+  border-left: 4px solid #4f46e5;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  font-family: -apple-system, "PingFang TC", "Microsoft JhengHei", sans-serif;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mesh-toast.mesh-sync { border-left-color: #10704a; }
+.mesh-toast.mesh-status { flex-direction: row; align-items: center; gap: 10px; }
+
+/* 多張確認卡往上疊 */
+.mesh-toast.mesh-sync:nth-last-of-type(2) { bottom: 140px; }
+.mesh-toast.mesh-sync:nth-last-of-type(3) { bottom: 260px; }
+
+.mesh-toast-title { font-weight: 700; }
+
+.mesh-toast-preview {
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 120px;
+  overflow-y: auto;
+  background: #f9fafb;
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.mesh-toast-actions { display: flex; gap: 8px; }
+
+.mesh-btn {
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #374151;
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.mesh-btn-primary {
+  background: #10704a;
+  border-color: #10704a;
+  color: #ffffff;
+}
+
+.mesh-btn:hover { filter: brightness(0.95); }
+
+/* 教訓：連結按鈕要把 :visited/:hover/:active 一起寫死，不吃站方樣式 */
+.mesh-doc-link,
+.mesh-doc-link:visited,
+.mesh-doc-link:hover,
+.mesh-doc-link:active {
+  color: #4f46e5;
+  font-weight: 700;
+  text-decoration: underline;
+  white-space: nowrap;
+}
+
+.mesh-capture-btn {
+  position: absolute;
+  z-index: 2147483647;
+  background: #4f46e5;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: -apple-system, "PingFang TC", "Microsoft JhengHei", sans-serif;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+}
+
+.mesh-capture-btn:hover { background: #4338ca; }

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    width: 360px;
+    font-family: -apple-system, "PingFang TC", "Microsoft JhengHei", sans-serif;
+    font-size: 13px;
+    color: #1f2937;
+    background: #ffffff;
+  }
+  header {
+    background: #1e1b3a;
+    color: #ffffff;
+    padding: 14px 16px;
+  }
+  header h1 { font-size: 16px; }
+  header p { color: #a5b4fc; font-size: 12px; margin-top: 2px; }
+  section { padding: 12px 16px; border-bottom: 1px solid #f3f4f6; }
+  .row { display: flex; align-items: center; gap: 8px; }
+  .grow { flex: 1; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #dc2626; display: inline-block; }
+  .dot.on { background: #10704a; }
+  label.small { font-size: 11px; color: #6b7280; letter-spacing: 0.05em; }
+  input[type="text"], select {
+    width: 100%;
+    padding: 7px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 7px;
+    font-size: 13px;
+    margin-top: 4px;
+  }
+  button {
+    border: 1px solid #d1d5db;
+    background: #ffffff;
+    color: #374151;
+    border-radius: 7px;
+    padding: 7px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  button.primary {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #ffffff;
+    width: 100%;
+    padding: 9px;
+    font-weight: 700;
+  }
+  button.danger-armed { background: #dc2626; border-color: #dc2626; color: #ffffff; }
+  button:hover { filter: brightness(0.96); }
+  .hint { font-size: 11px; color: #9ca3af; margin-top: 4px; }
+  .msg { font-size: 12px; margin-top: 6px; min-height: 15px; }
+  .msg.ok { color: #10704a; }
+  .msg.err { color: #dc2626; }
+  a, a:visited, a:hover, a:active { color: #4f46e5; }
+  textarea {
+    width: 100%;
+    height: 96px;
+    font-size: 11px;
+    font-family: ui-monospace, Menlo, monospace;
+    border: 1px solid #d1d5db;
+    border-radius: 7px;
+    padding: 8px;
+    margin-top: 6px;
+    resize: none;
+    color: #4b5563;
+    background: #f9fafb;
+  }
+  #logList { list-style: none; max-height: 120px; overflow-y: auto; margin-top: 6px; }
+  #logList li { padding: 3px 0; border-bottom: 1px dashed #f3f4f6; font-size: 12px; }
+  #logList .t { color: #9ca3af; margin-right: 6px; }
+  footer { text-align: center; color: #9ca3af; font-size: 11px; padding: 10px; }
+  .toggle-row { justify-content: space-between; }
+</style>
+</head>
+<body>
+<header>
+  <h1>⚡ Mesh Sync</h1>
+  <p>ChatGPT / Claude / Gemini → Google Drive 脈絡 Doc</p>
+</header>
+
+<section>
+  <div class="row">
+    <span id="connDot" class="dot"></span>
+    <span id="connText" class="grow">檢查中…</span>
+    <button id="connectBtn">連接 Google</button>
+  </div>
+  <div id="connMsg" class="msg"></div>
+</section>
+
+<section>
+  <label class="small">客戶</label>
+  <div class="row" style="margin-top:4px">
+    <select id="profileSelect" class="grow"></select>
+    <button id="addBtn" title="新增客戶">＋</button>
+    <button id="delBtn" title="刪除客戶">✕</button>
+  </div>
+  <div id="addRow" class="row" style="display:none; margin-top:6px">
+    <input type="text" id="addName" class="grow" placeholder="新客戶名稱">
+    <button id="addOk">建立</button>
+  </div>
+
+  <label class="small" style="display:block; margin-top:10px">DRIVE 資料夾名稱（此客戶）</label>
+  <input type="text" id="folderName" placeholder="Mesh Sync 脈絡紀錄">
+  <div class="hint" id="folderHint">第一次寫入時會自動在你的雲端硬碟建立這個資料夾。</div>
+
+  <button id="saveBtn" class="primary" style="margin-top:10px">儲存此客戶設定</button>
+  <div id="saveMsg" class="msg"></div>
+</section>
+
+<section>
+  <div class="row toggle-row">
+    <span>自動偵測 [CONTEXT]/[SYNC] 標記</span>
+    <input type="checkbox" id="autoDetect" checked>
+  </div>
+</section>
+
+<section>
+  <div class="row toggle-row">
+    <label class="small">貼進 AI 個人化設定的 PROMPT</label>
+    <button id="copyPrompt">複製</button>
+  </div>
+  <textarea id="promptText" readonly></textarea>
+  <div class="hint">貼到 ChatGPT 自訂指令／Claude 個人偏好／Gemini Saved Info，AI 才會輸出 [CONTEXT] 標記。</div>
+</section>
+
+<section>
+  <label class="small">最近寫入</label>
+  <ul id="logList"></ul>
+</section>
+
+<footer>Mesh Sync v3.0 · 開源版 · 資料只進你自己的 Google Drive</footer>
+<script src="src/popup.js"></script>
+</body>
+</html>
