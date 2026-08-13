@@ -273,6 +273,14 @@ async function appendFragment(token, docId, p) {
           fields: 'namedStyleType',
         },
       },
+      // 插入的文字會繼承插入點的格式（底色、粗體…），一律清乾淨
+      {
+        updateTextStyle: {
+          range: { startIndex: insertAt, endIndex: insertAt + head.length + bodyText.length },
+          textStyle: {},
+          fields: 'backgroundColor,foregroundColor,bold,italic,underline,strikethrough',
+        },
+      },
     ],
   });
 }

@@ -34,11 +34,12 @@
     // 診斷：讓程式自己交出證據，不用開主控台猜
     if (msg.type === 'MESH_DIAG') {
       const els = assistantEls();
-      const turns = document.querySelectorAll(TURNS[platform].selector).length;
+      const blocks = turnBlocks();
       sendResponse({
         platform,
         assistant: els.length,
-        turns,
+        turns: blocks.length,
+        ai: blocks.filter((b) => !b.isUser).length,
         hasMarker: /\[(CONTEXT|SYNC)\]/.test(readableText(document.body)),
         seen: seen.size,
         autoDetect,
@@ -57,23 +58,53 @@
     return false;
   });
 
-  function fullTranscript(lastN) {
+  const USER_MARK = '[data-testid="user-message"], [data-message-author-role="user"], user-query';
+
+  // 回傳每一輪 {el, isUser}。平台改版只認得使用者訊息時（Claude 就發生過，
+  // 結果逐字稿整份只有使用者發言），改用「共同容器的子區塊」還原 AI 的回覆。
+  function turnBlocks() {
     const cfg = TURNS[platform];
-    let els = [...document.querySelectorAll(cfg.selector)];
-    if (lastN > 0) els = els.slice(-lastN);
+    const els = [...document.querySelectorAll(cfg.selector)];
+    const hasAssistant = els.some((el) => !cfg.isUser(el));
+    if (els.length && hasAssistant) {
+      return els.map((el) => ({ el, isUser: cfg.isUser(el) }));
+    }
+
+    const anchors = [...document.querySelectorAll(USER_MARK)];
+    if (!anchors.length) return [];
+    let container = anchors[0].parentElement;
+    while (container && container.parentElement
+      && !anchors.every((a) => container.contains(a))) {
+      container = container.parentElement;
+    }
+    if (!container) return [];
+    return [...container.children].map((el) => ({
+      el,
+      isUser: anchors.some((a) => el === a || el.contains(a)),
+    }));
+  }
+
+  function fullTranscript(lastN) {
     const aiName = { chatgpt: 'ChatGPT', claude: 'Claude', gemini: 'Gemini' }[platform];
-    // 平台改版導致抓不到任何一輪時，至少把整頁可讀文字收下來，不要空手而回
-    if (!els.length) {
+    let turns = turnBlocks();
+    if (lastN > 0) turns = turns.slice(-lastN);
+
+    // 一輪都認不出來時，至少把整頁可讀文字收下來，不要空手而回
+    if (!turns.length) {
       if (lastN > 0) return '';
       const main = document.querySelector('main') || document.body;
       return readableText(main).replace(/\n{3,}/g, '\n\n').trim();
     }
+
     const parts = [];
-    for (const el of els) {
+    for (const { el, isUser } of turns) {
       // 標記區塊是給程式看的，收進逐字紀錄只會佔版面
-      const body = (el.innerText || '').replace(/\[(CONTEXT|SYNC)\][\s\S]*?\[\/\1\]/g, '').trim();
+      const body = readableText(el)
+        .replace(BLOCK_STRIP_RE, '')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
       if (!body) continue;
-      parts.push(`${cfg.isUser(el) ? '👤 我' : `🤖 ${aiName}`}：\n${body}`);
+      parts.push(`${isUser ? '👤 我' : `🤖 ${aiName}`}：\n${body}`);
     }
     return parts.join('\n\n');
   }
@@ -137,6 +168,8 @@
   // 內容中不得再出現開頭標記，否則 AI 在說明文字裡提到「[CONTEXT]」時，
   // 比對會從那個裸標記一路吃到結束標記，把中間的白話文一起收進來。
   const BLOCK_RE = /\[(CONTEXT|SYNC)\]((?:(?!\[(?:CONTEXT|SYNC)\])[\s\S])*?)\[\/\1\]/g;
+  // 逐字稿要移除標記區塊，同樣不能貪心地從裸標記一路吃過去
+  const BLOCK_STRIP_RE = /\[(CONTEXT|SYNC)\](?:(?!\[(?:CONTEXT|SYNC)\])[\s\S])*?\[\/\1\]/g;
 
   const SELECTORS = {
     chatgpt: '[data-message-author-role="assistant"] .markdown',
@@ -269,7 +302,8 @@
         const s = renderField(key, val);
         if (s) lines.push(s);
       }
-      return lines.length ? lines.join('\n') : raw;
+      // 區塊之間空一行，不要全部擠成一坨
+      return lines.length ? lines.join('\n\n') : raw;
     } catch (_) {
       return raw;
     }
