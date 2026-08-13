@@ -180,10 +180,14 @@
 
   function showStatusToast(msg, docUrl, autoHideMs) {
     if (statusToast) statusToast.remove();
-    statusToast = baseToast('mesh-status');
+    const el = baseToast('mesh-status');
+    statusToast = el;
+
     const span = document.createElement('span');
+    span.className = 'mesh-status-text';
     span.textContent = msg;
-    statusToast.appendChild(span);
+    el.appendChild(span);
+
     if (docUrl) {
       const a = document.createElement('a');
       a.className = 'mesh-doc-link';
@@ -191,17 +195,33 @@
       a.href = docUrl;
       a.target = '_blank';
       a.rel = 'noopener';
-      statusToast.appendChild(a);
+      el.appendChild(a);
     }
+
+    function close() {
+      clearTimeout(timer);
+      el.remove();
+      if (statusToast === el) statusToast = null;
+    }
+
     if (autoHideMs > 0) {
-      const me = statusToast;
-      setTimeout(() => {
-        if (statusToast === me) {
-          me.remove();
-          statusToast = null;
-        }
-      }, autoHideMs);
+      const closeBtn = document.createElement('button');
+      closeBtn.type = 'button';
+      closeBtn.className = 'mesh-close';
+      closeBtn.textContent = '✕';
+      closeBtn.title = '關閉';
+      closeBtn.addEventListener('click', close);
+      el.appendChild(closeBtn);
     }
+
+    // 滑鼠停在卡片上就不倒數，離開才重新計時——來得及點「開啟 Doc」
+    let timer = null;
+    const arm = () => {
+      if (autoHideMs > 0) timer = setTimeout(close, autoHideMs);
+    };
+    el.addEventListener('mouseenter', () => clearTimeout(timer));
+    el.addEventListener('mouseleave', arm);
+    arm();
   }
 
   // 多張卡片由程式算位置往上疊，不靠 CSS 選擇器猜順序

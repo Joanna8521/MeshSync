@@ -138,6 +138,24 @@ async function activeProfile() {
 
 async function ensureFolder(token, profile) {
   const { meshFolders = {} } = await chrome.storage.local.get(['meshFolders']);
+
+  // 使用者指定的資料夾優先。drive.file 權限只看得到本擴充建立（或使用者授權過）
+  // 的檔案，所以外部資料夾可能拿不到——這時要給看得懂的說明，不能只丟 404。
+  if (profile.folderId) {
+    try {
+      const f = await api(token, 'GET', `${DRIVE}/files/${profile.folderId}?fields=id,trashed,mimeType`);
+      if (f && !f.trashed && f.mimeType === 'application/vnd.google-apps.folder') return profile.folderId;
+      throw new Error('指定的 ID 不是有效的資料夾（可能已刪除）');
+    } catch (e) {
+      if (e.auth) throw e;
+      throw new Error(
+        '無法存取你指定的資料夾。本擴充只有「自己建立的檔案」的權限，'
+        + '請清空這個欄位讓它自動建立資料夾，再到 Google Drive 把該資料夾拖到你想要的位置'
+        + '（搬移後仍然有效）。'
+      );
+    }
+  }
+
   const cached = meshFolders[profile.id];
   if (cached) {
     try {

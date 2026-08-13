@@ -88,9 +88,19 @@ function activeProfile() {
   return profiles.find((p) => p.id === activeId) || profiles[0];
 }
 
+// 使用者會直接貼整條網址，要洗成純 ID
+function parseFolderId(input) {
+  const s = String(input || '').trim();
+  if (!s) return '';
+  const m = s.match(/\/folders\/([a-zA-Z0-9_-]+)/) || s.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (m) return m[1];
+  return s.replace(/^https?:\/\/\S*\//, '').replace(/[?#].*$/, '').trim();
+}
+
 async function renderProfileFields() {
   const p = activeProfile();
   $('folderName').value = p.folderName || '';
+  $('folderId').value = p.folderId || '';
   const { meshFolders = {} } = await chrome.storage.local.get(['meshFolders']);
   const fid = meshFolders[p.id];
   const hint = $('folderHint');
@@ -174,15 +184,21 @@ function disarmDelete() {
 function saveProfile() {
   const p = activeProfile();
   p.folderName = $('folderName').value.trim() || p.folderName;
+  p.folderId = parseFolderId($('folderId').value);
   chrome.storage.sync.set({ profiles }, async () => {
     if (chrome.runtime.lastError) {
       setMsg('saveMsg', 'err', `儲存失敗：${chrome.runtime.lastError.message}`);
       return;
     }
+    $('folderId').value = p.folderId;
     const { meshFolders = {} } = await chrome.storage.local.get(['meshFolders']);
-    setMsg('saveMsg', 'ok', meshFolders[p.id]
-      ? '✅ 已儲存（資料夾已存在，改名請直接在 Drive 改）'
-      : '✅ 已儲存，第一次寫入時建立資料夾');
+    if (p.folderId) {
+      setMsg('saveMsg', 'ok', '✅ 已儲存，將寫入你指定的資料夾（下次寫入時驗證是否有權限）');
+    } else {
+      setMsg('saveMsg', 'ok', meshFolders[p.id]
+        ? '✅ 已儲存（資料夾已存在，改名請直接在 Drive 改）'
+        : '✅ 已儲存，第一次寫入時建立資料夾');
+    }
   });
 }
 

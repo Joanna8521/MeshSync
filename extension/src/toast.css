@@ -46,6 +46,20 @@
 
 .mesh-toast-actions { display: flex; gap: 8px; }
 
+.mesh-status-text { flex: 1; }
+
+.mesh-close {
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  font-size: 14px;
+  line-height: 1;
+  padding: 2px 4px;
+  cursor: pointer;
+}
+
+.mesh-close:hover { color: #4b5563; }
+
 .mesh-btn {
   border: 1px solid #d1d5db;
   background: #ffffff;
