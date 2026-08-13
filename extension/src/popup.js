@@ -41,6 +41,33 @@ async function init() {
   $('saveBtn').addEventListener('click', saveProfile);
   $('autoDetect').addEventListener('change', saveAutoDetect);
   $('copyPrompt').addEventListener('click', copyPrompt);
+  $('captureAll').addEventListener('click', captureAll);
+}
+
+// ── 收錄整場對話 ──────────────────────────────────
+
+const SUPPORTED = /^https:\/\/(chatgpt\.com|chat\.openai\.com|claude\.ai|gemini\.google\.com)\//;
+
+function captureAll() {
+  setMsg('allMsg', '', '');
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    const tab = tabs && tabs[0];
+    if (!tab || !SUPPORTED.test(tab.url || '')) {
+      setMsg('allMsg', 'err', '請先切到 ChatGPT / Claude / Gemini 的對話分頁');
+      return;
+    }
+    chrome.tabs.sendMessage(tab.id, { type: 'MESH_CAPTURE_ALL' }, (res) => {
+      if (chrome.runtime.lastError) {
+        setMsg('allMsg', 'err', `請重新整理該分頁後再試（${chrome.runtime.lastError.message}）`);
+        return;
+      }
+      if (res && res.ok) {
+        setMsg('allMsg', 'ok', `⏳ 已送出 ${res.chars.toLocaleString()} 字，結果會顯示在頁面上`);
+      } else {
+        setMsg('allMsg', 'err', (res && res.error) || '收錄失敗');
+      }
+    });
+  });
 }
 
 // ── 連線狀態 ──────────────────────────────────────

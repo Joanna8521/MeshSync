@@ -23,6 +23,33 @@
     if (area === 'sync' && ch.autoDetect) autoDetect = ch.autoDetect.newValue !== false;
   });
 
+  // 來自 popup 的「收錄整場對話」
+  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+    if (msg.type !== 'MESH_CAPTURE_ALL') return false;
+    const text = fullTranscript();
+    if (!text) {
+      sendResponse({ ok: false, error: '這個頁面上找不到對話內容' });
+      return false;
+    }
+    sendCapture(text, 'full');
+    sendResponse({ ok: true, chars: text.length });
+    return false;
+  });
+
+  function fullTranscript() {
+    const cfg = TURNS[platform];
+    const els = [...document.querySelectorAll(cfg.selector)];
+    const aiName = { chatgpt: 'ChatGPT', claude: 'Claude', gemini: 'Gemini' }[platform];
+    const parts = [];
+    for (const el of els) {
+      // 標記區塊是給程式看的，收進逐字紀錄只會佔版面
+      const body = (el.innerText || '').replace(/\[(CONTEXT|SYNC)\][\s\S]*?\[\/\1\]/g, '').trim();
+      if (!body) continue;
+      parts.push(`${cfg.isUser(el) ? '👤 我' : `🤖 ${aiName}`}：\n${body}`);
+    }
+    return parts.join('\n\n');
+  }
+
   // ── 對話資訊 ──────────────────────────────────────
 
   function convUrl() {
@@ -82,6 +109,22 @@
     chatgpt: '[data-message-author-role="assistant"] .markdown',
     claude: '[data-testid="message-content"], .font-claude-message',
     gemini: 'model-response, .model-response-text, message-content',
+  };
+
+  // 整場對話：依畫面順序抓「每一輪」，並判斷這一輪是誰說的
+  const TURNS = {
+    chatgpt: {
+      selector: '[data-message-author-role]',
+      isUser: (el) => el.getAttribute('data-message-author-role') === 'user',
+    },
+    claude: {
+      selector: '[data-testid="user-message"], .font-claude-message',
+      isUser: (el) => el.matches('[data-testid="user-message"]'),
+    },
+    gemini: {
+      selector: 'user-query, model-response',
+      isUser: (el) => el.tagName.toLowerCase() === 'user-query',
+    },
   };
 
   function assistantEls() {

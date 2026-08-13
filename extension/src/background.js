@@ -253,7 +253,7 @@ async function appendFragment(token, docId, p) {
     insertAt = last ? last.endIndex - 1 : 1;
   }
 
-  const srcLabel = p.source === 'selection' ? '手動圈選' : 'AI 標記';
+  const srcLabel = { selection: '手動圈選', full: '整場對話', marker: 'AI 標記' }[p.source] || 'AI 標記';
   const head = `🕐 ${dateTimeStr()}・${srcLabel}\n`;
   const bodyText = `${cleanText(p.text)}\n\n`;
   await api(token, 'POST', `${DOCS}/documents/${docId}:batchUpdate`, {
