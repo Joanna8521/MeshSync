@@ -28,7 +28,7 @@ async function init() {
   $('promptText').value = PROMPT_SNIPPET;
 
   const s = await chrome.storage.sync.get(['profiles', 'activeProfileId', 'autoDetect', 'contextTurns',
-    'f4Enabled', 'f4Base', 'f4Folder']);
+    'f4Enabled', 'f4Base', 'f4Folder', 'f4Private']);
   profiles = Array.isArray(s.profiles) && s.profiles.length
     ? s.profiles
     : [{ id: 'default', name: '自用', folderName: 'Mesh Sync 脈絡紀錄' }];
@@ -38,6 +38,7 @@ async function init() {
   $('f4Enabled').checked = !!s.f4Enabled;
   $('f4Base').value = s.f4Base || '';
   $('f4Folder').value = s.f4Folder || '';
+  $('f4Private').checked = s.f4Private !== false;
 
   renderProfiles();
   renderProfileFields();
@@ -61,6 +62,7 @@ async function init() {
   $('f4Enabled').addEventListener('change', saveFocus4ai);
   $('f4Base').addEventListener('change', saveFocus4ai);
   $('f4Folder').addEventListener('change', saveFocus4ai);
+  $('f4Private').addEventListener('change', saveFocus4ai);
   $('f4Test').addEventListener('click', testFocus4ai);
 }
 
@@ -80,7 +82,7 @@ function f4Origin() {
 function ensureHostPermission(cb) {
   const origin = f4Origin();
   if (!origin) {
-    setMsg('f4Msg', 'err', '網址格式不對，要像 http://localhost:8080');
+    setMsg('f4Msg', 'err', '網址格式不對，要像 https://app.focus4ai.com');
     return;
   }
   chrome.permissions.request({ origins: [`${origin}/*`] }, (granted) => {
@@ -97,7 +99,7 @@ function saveFocus4ai() {
   const base = $('f4Base').value.trim().replace(/\/+$/, '');
   const folder = $('f4Folder').value.trim() || '00_inbox/mesh-sync';
   const store = () => chrome.storage.sync.set(
-    { f4Enabled: enabled, f4Base: base, f4Folder: folder },
+    { f4Enabled: enabled, f4Base: base, f4Folder: folder, f4Private: $('f4Private').checked },
     () => {
       if (chrome.runtime.lastError) {
         setMsg('f4Msg', 'err', chrome.runtime.lastError.message);

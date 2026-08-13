@@ -150,7 +150,7 @@ function mdEscape(s) {
 }
 
 async function syncToFocus4ai(p, docName) {
-  const s = await chrome.storage.sync.get(['f4Enabled', 'f4Base', 'f4Folder']);
+  const s = await chrome.storage.sync.get(['f4Enabled', 'f4Base', 'f4Folder', 'f4Private']);
   if (!s.f4Enabled || !s.f4Base) return null;
 
   const base = String(s.f4Base).replace(/\/+$/, '');
@@ -176,12 +176,15 @@ async function syncToFocus4ai(p, docName) {
     out = `${existing.replace(/\s*$/, '')}\n\n## ${stamp}・${srcLabel}\n\n${body}\n`;
   } else {
     // frontmatter 讓切片器拿得到中繼資料，標題階層讓它有語意邊界可切
+    // AI 對話裡常有客戶名、報價這類東西，預設不送外部模型。
+    // 知識庫端沒寫 privacy 的檔預設是 embeddable，對這批內容太寬鬆。
     out = [
       '---',
       `title: "${mdEscape(p.title || docName)}"`,
       `source: "${p.convUrl}"`,
       `platform: ${p.platform}`,
       `captured: ${stamp}`,
+      ...(s.f4Private === false ? [] : ['privacy: local_only']),
       'tags: [mesh-sync, ai-對話脈絡]',
       '---',
       '',

@@ -90,6 +90,21 @@ extension/
 
 - `key.pem`（專案根目錄、不進 git）：打包 .crx 時才需要的私鑰。載入未封裝不需要它。
 
+## 選用：同步到 Focus4ai 知識庫
+
+在 popup 開啟「同步到 Focus4ai 知識庫」後，每次收錄除了寫進 Google Drive，
+還會以 Markdown 寫進知識庫並**當場切片建索引**（走 `PUT /api/doc`，不需修改 Focus4ai）。
+
+- **網址**填站台根位址（線上站台是 `https://app.focus4ai.com`，本機自架是
+  `http://localhost:8000`）。注意 `focus4ai.com` 是官網、沒有 API，填了會失敗。
+- **資料夾**預設 `00_inbox/mesh-sync`：屬於收件匣底下的子資料夾，
+  所以搬移、標籤、刪除的動線跟一般筆記完全共用，但跟手動匯入的資料分開放。
+- **local_only**：預設會在 frontmatter 寫 `privacy: local_only`。
+  AI 對話常有客戶名與報價，知識庫端沒寫這個欄位的檔預設是可送外部模型的，
+  對這批內容太寬鬆。要改用預設值就把這個開關關掉。
+- 站台有登入牆時，擴充會帶著你在同一個瀏覽器的登入 session；請先登入再同步。
+  被導到登入頁時會明確報錯，不會謊報成功。
+
 ## 隱私
 
 完整隱私權政策：<https://joanna8521.github.io/MeshSync/privacy.html>（[docs/privacy.html](docs/privacy.html)）
