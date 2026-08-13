@@ -16,9 +16,9 @@ chrome.runtime.onInstalled.addListener((details) => {
   }
 });
 
-chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === 'MESH_CAPTURE') {
-    handleCapture(msg.payload).then(sendResponse);
+    handleCapture(msg.payload, sender.tab && sender.tab.id).then(sendResponse);
     return true;
   }
   if (msg.type === 'MESH_CONNECT') {
@@ -38,8 +38,35 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
 // ── OAuth ────────────────────────────────────────────
 
+// 每一個等待都要有盡頭。沒有逾時的等待，使用者看到的是永遠轉圈，
+// 而轉圈不帶任何資訊，他只能猜「是慢還是壞了」。
+function withTimeout(promise, ms, what) {
+  let timer;
+  return Promise.race([
+    promise.finally(() => clearTimeout(timer)),
+    new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`${what}逾時（${Math.round(ms / 1000)} 秒沒有回應）`)), ms);
+    }),
+  ]);
+}
+
+async function fetchT(url, opts = {}, ms = 45000) {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), ms);
+  try {
+    return await fetch(url, { ...opts, signal: ctl.signal });
+  } catch (e) {
+    if (e.name === 'AbortError') {
+      throw new Error(`連線逾時（${Math.round(ms / 1000)} 秒）：${new URL(url).host}`);
+    }
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function getToken(interactive) {
-  return new Promise((resolve, reject) => {
+  const p = new Promise((resolve, reject) => {
     chrome.identity.getAuthToken({ interactive }, (token) => {
       if (chrome.runtime.lastError || !token) {
         reject(new Error(
@@ -50,6 +77,8 @@ function getToken(interactive) {
       }
     });
   });
+  // 授權視窗開了沒人理，callback 就永遠不會回來
+  return interactive ? withTimeout(p, 120000, 'Google 授權') : p;
 }
 
 async function withAuthRetry(fn) {
@@ -69,7 +98,7 @@ async function withAuthRetry(fn) {
 // 教訓：非 2xx 一律丟錯並帶上後端原因，錯誤訊息不能是空的
 
 async function api(token, method, url, body) {
-  const res = await fetch(url, {
+  const res = await fetchT(url, {
     method,
     headers: {
       Authorization: `Bearer ${token}`,
@@ -99,14 +128,26 @@ function errMsg(e) {
 
 // ── 主流程 ───────────────────────────────────────────
 
-async function handleCapture(p) {
+// 讓使用者看得到走到哪一步。轉圈本身不帶資訊，卡住時只能猜。
+function progress(tabId, text) {
+  if (tabId == null) return;
   try {
-    const result = await withAuthRetry((token) => doCapture(token, p));
+    chrome.tabs.sendMessage(tabId, { type: 'MESH_PROGRESS', text }, () => {
+      void chrome.runtime.lastError; // 分頁關了就算了
+    });
+  } catch (_) { /* 分頁不在了 */ }
+}
+
+async function handleCapture(p, tabId) {
+  try {
+    progress(tabId, '確認 Google 授權…');
+    const result = await withAuthRetry((token) => doCapture(token, p, tabId));
 
     // 知識庫是附加目的地：失敗只回報，不能讓主功能跟著失敗
     let f4 = null;
     let f4Error = '';
     try {
+      progress(tabId, '同步到知識庫…');
       f4 = await syncToFocus4ai(p, result.docName);
     } catch (e) {
       f4Error = errMsg(e);
@@ -129,10 +170,13 @@ async function handleCapture(p) {
   }
 }
 
-async function doCapture(token, p) {
+async function doCapture(token, p, tabId) {
   const profile = await activeProfile();
+  progress(tabId, '確認 Drive 資料夾…');
   const folderId = await ensureFolder(token, profile);
+  progress(tabId, '開啟這場對話的 Doc…');
   const doc = await ensureDoc(token, folderId, profile, p);
+  progress(tabId, `寫入 ${p.text.length.toLocaleString()} 字…`);
   await appendFragment(token, doc.docId, p);
   return { docName: doc.name, docUrl: `https://docs.google.com/document/d/${doc.docId}/edit` };
 }
@@ -161,9 +205,9 @@ async function syncToFocus4ai(p, docName) {
   // 先讀回既有內容，才能累加而不是覆蓋（同一場對話會寫很多次）
   let existing = '';
   try {
-    const res = await fetch(`${base}/api/doc?path=${encodeURIComponent(path)}`, {
+    const res = await fetchT(`${base}/api/doc?path=${encodeURIComponent(path)}`, {
       credentials: 'include',
-    });
+    }, 20000);
     if (res.ok && isJson(res)) existing = (await res.json()).content || '';
   } catch (_) { /* 404 或第一次寫入，正常 */ }
 
@@ -199,12 +243,12 @@ async function syncToFocus4ai(p, docName) {
     ].join('\n');
   }
 
-  const res = await fetch(url, {
+  const res = await fetchT(url, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include', // 站台有登入牆時要帶著使用者自己的 session
     body: JSON.stringify({ content: out }),
-  });
+  }, 30000);
   if (!res.ok) {
     let detail = '';
     try { detail = (await res.json()).detail || ''; } catch (_) { /* 非 JSON */ }

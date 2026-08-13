@@ -31,6 +31,11 @@
   });
 
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+    if (msg.type === 'MESH_PROGRESS') {
+      updateStatusText(`⏳ ${msg.text}`);
+      return false;
+    }
+
     // 診斷：讓程式自己交出證據，不用開主控台猜
     if (msg.type === 'MESH_DIAG') {
       const els = assistantEls();
@@ -311,12 +316,20 @@
 
   // ── 寫入 ─────────────────────────────────────────
 
+  let watchdog = null;
+
   function sendCapture(text, source) {
-    showStatusToast(`⏳ 寫入中…（${text.length.toLocaleString()} 字）`, null, 0);
+    showStatusToast(`⏳ 準備寫入…（${text.length.toLocaleString()} 字）`, null, 0, true);
+    // 背景服務可能被瀏覽器休眠而讓回呼永遠不來，不設看門狗就是無盡轉圈
+    clearTimeout(watchdog);
+    watchdog = setTimeout(() => {
+      showStatusToast('❌ 超過三分鐘沒有回應，請重試一次；若持續發生請看擴充的「最近寫入」紀錄', null, 20000);
+    }, 180000);
     chrome.runtime.sendMessage({
       type: 'MESH_CAPTURE',
       payload: { text, source, platform, convUrl: convUrl(), title: convTitle() },
     }, (res) => {
+      clearTimeout(watchdog);
       if (chrome.runtime.lastError) {
         showStatusToast(`❌ ${chrome.runtime.lastError.message}`, null, 8000);
         return;
@@ -345,7 +358,13 @@
     return el;
   }
 
-  function showStatusToast(msg, docUrl, autoHideMs) {
+  function updateStatusText(text) {
+    if (!statusToast) return;
+    const span = statusToast.querySelector('.mesh-status-text');
+    if (span) span.textContent = text;
+  }
+
+  function showStatusToast(msg, docUrl, autoHideMs, busy) {
     if (statusToast) statusToast.remove();
     const el = baseToast('mesh-status');
     statusToast = el;
@@ -354,6 +373,15 @@
     span.className = 'mesh-status-text';
     span.textContent = msg;
     el.appendChild(span);
+
+    // 進行中就掛一條不定量進度條：不知道還要多久，但看得出它還活著
+    if (busy) {
+      el.classList.add('mesh-busy');
+      const bar = document.createElement('div');
+      bar.className = 'mesh-progress';
+      bar.appendChild(document.createElement('i'));
+      el.appendChild(bar);
+    }
 
     if (docUrl) {
       const a = document.createElement('a');

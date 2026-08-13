@@ -54,6 +54,30 @@
 
 .mesh-status-text { flex: 1; }
 
+/* 進行中的不定量進度條：不知道還剩多久，但看得出它還活著 */
+.mesh-toast.mesh-busy { flex-direction: column; align-items: stretch; gap: 8px; }
+
+.mesh-progress {
+  height: 3px;
+  border-radius: 2px;
+  background: #e5e7eb;
+  overflow: hidden;
+}
+
+.mesh-progress i {
+  display: block;
+  height: 100%;
+  width: 40%;
+  border-radius: 2px;
+  background: #4f46e5;
+  animation: mesh-slide 1.1s ease-in-out infinite;
+}
+
+@keyframes mesh-slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(250%); }
+}
+
 .mesh-close {
   border: none;
   background: transparent;
