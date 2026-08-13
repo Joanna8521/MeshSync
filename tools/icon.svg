@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- Mesh Sync 圖示原始檔。改形狀後請同步更新 tools/make_icons.py 的 BOLT_PATH -->
+  <rect width="128" height="128" rx="28" fill="#4F46E5"/>
+  <polygon fill="#FDE047" points="74.9,7.0 32.6,71.7 57.6,71.7 50.6,121.0 94.1,55.0 69.1,55.0"/>
+</svg>
