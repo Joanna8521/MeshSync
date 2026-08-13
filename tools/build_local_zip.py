@@ -19,6 +19,10 @@ ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "extension"
 FOLDER = "mesh-sync-extension"
 
+# 檔名一律用 ASCII。UTF-8 旗標我們有設，但 Windows 檔案總管的解壓縮
+# 常常忽略它、改用系統編碼，中文檔名就變成亂碼。內容仍然是中文。
+GUIDE_NAME = "INSTALL.txt"
+
 GUIDE = """Mesh Sync 安裝說明（三分鐘）
 
 1. 把這個資料夾放到你放得住的地方（例如「文件」）。
@@ -61,12 +65,14 @@ def main():
     with tempfile.TemporaryDirectory() as tmp:
         stage = Path(tmp) / FOLDER
         shutil.copytree(SRC, stage, ignore=shutil.ignore_patterns(".*", "__MACOSX"))
-        (Path(tmp) / "安裝說明.txt").write_text(GUIDE, encoding="utf-8")
+        (Path(tmp) / GUIDE_NAME).write_text(GUIDE, encoding="utf-8")
 
         with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
             for path in sorted(Path(tmp).rglob("*")):
                 if path.is_file():
-                    z.write(path, path.relative_to(tmp))
+                    name = str(path.relative_to(tmp))
+                    assert name.isascii(), f"zip 內的檔名要用 ASCII，避免 Windows 解壓亂碼：{name}"
+                    z.write(path, name)
 
     print(f"已產生 {out.name}（{out.stat().st_size / 1024:.1f} KB）")
     print(f"  擴充 ID 固定：key 欄位保留")
