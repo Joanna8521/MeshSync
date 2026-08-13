@@ -22,11 +22,15 @@
 }
 
 .mesh-toast.mesh-sync { border-left-color: #10704a; }
-.mesh-toast.mesh-status { flex-direction: row; align-items: center; gap: 10px; }
 
-/* 多張確認卡往上疊 */
-.mesh-toast.mesh-sync:nth-last-of-type(2) { bottom: 140px; }
-.mesh-toast.mesh-sync:nth-last-of-type(3) { bottom: 260px; }
+/* 狀態訊息走上方，不跟下方的確認卡搶位置 */
+.mesh-toast.mesh-status {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  top: 20px;
+  bottom: auto;
+}
 
 .mesh-toast-title { font-weight: 700; }
 

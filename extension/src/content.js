@@ -84,9 +84,13 @@
     gemini: 'model-response, .model-response-text, message-content',
   };
 
-  function assistantText() {
-    const els = document.querySelectorAll(SELECTORS[platform]);
-    return [...els].map((el) => el.innerText || '').join('\n');
+  function assistantEls() {
+    return [...document.querySelectorAll(SELECTORS[platform])];
+  }
+
+  // prompt 裡的示範格式會被 AI 複述，別把它當成真的脈絡
+  function isTemplate(raw) {
+    return raw.includes('一句話總結') || (raw.includes('重點1') && raw.includes('重點2'));
   }
 
   function hashStr(str) {
@@ -103,18 +107,29 @@
   });
   observer.observe(document.body, { childList: true, subtree: true, characterData: true });
 
+  // 頁面載入時整場對話的歷史標記都會被掃到。只提示「最後一則回覆」裡的，
+  // 其餘標記為已看過但不跳卡片，否則重整一次就跳出一整排舊卡。
+  let firstScan = true;
+
   function scan() {
-    const all = assistantText();
-    BLOCK_RE.lastIndex = 0;
-    let m;
-    while ((m = BLOCK_RE.exec(all)) !== null) {
-      const raw = m[2].trim();
-      if (!raw) continue;
-      const key = hashStr(`${convUrl()}|${raw}`);
-      if (seen.has(key)) continue;
-      seen.add(key);
-      showConfirmToast(formatBlock(raw));
-    }
+    const els = assistantEls();
+    const lastIdx = els.length - 1;
+    els.forEach((el, idx) => {
+      const text = el.innerText || '';
+      BLOCK_RE.lastIndex = 0;
+      let m;
+      while ((m = BLOCK_RE.exec(text)) !== null) {
+        const raw = m[2].trim();
+        if (!raw) continue;
+        const key = hashStr(`${convUrl()}|${raw}`);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        if (isTemplate(raw)) continue;
+        if (firstScan && idx !== lastIdx) continue;
+        showConfirmToast(formatBlock(raw));
+      }
+    });
+    firstScan = false;
   }
 
   // 標記內容是 JSON 就整理成條列，不是就原樣收
@@ -189,6 +204,15 @@
     }
   }
 
+  // 多張卡片由程式算位置往上疊，不靠 CSS 選擇器猜順序
+  function restack() {
+    let bottom = 20;
+    for (const t of confirmToasts) {
+      t.style.bottom = `${bottom}px`;
+      bottom += t.offsetHeight + 12;
+    }
+  }
+
   function showConfirmToast(text) {
     // 最多同時三張，舊的先收
     while (confirmToasts.length >= 3) confirmToasts.shift().remove();
@@ -227,7 +251,9 @@
     function dismiss() {
       el.remove();
       confirmToasts = confirmToasts.filter((t) => t !== el);
+      restack();
     }
+    restack();
     setTimeout(dismiss, 60000);
   }
 })();
