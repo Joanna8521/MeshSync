@@ -15,6 +15,10 @@
     "https://www.googleapis.com/*",
     "https://docs.googleapis.com/*"
   ],
+  "optional_host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
   "oauth2": {
     "client_id": "177706410608-0l452h1vginh3k3ui4ecs1b2fccvgn5f.apps.googleusercontent.com",
     "scopes": [

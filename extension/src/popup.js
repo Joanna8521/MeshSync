@@ -27,13 +27,17 @@ document.addEventListener('DOMContentLoaded', init);
 async function init() {
   $('promptText').value = PROMPT_SNIPPET;
 
-  const s = await chrome.storage.sync.get(['profiles', 'activeProfileId', 'autoDetect', 'contextTurns']);
+  const s = await chrome.storage.sync.get(['profiles', 'activeProfileId', 'autoDetect', 'contextTurns',
+    'f4Enabled', 'f4Base', 'f4Folder']);
   profiles = Array.isArray(s.profiles) && s.profiles.length
     ? s.profiles
     : [{ id: 'default', name: '自用', folderName: 'Mesh Sync 脈絡紀錄' }];
   activeId = profiles.some((p) => p.id === s.activeProfileId) ? s.activeProfileId : profiles[0].id;
   $('autoDetect').checked = s.autoDetect !== false;
   $('contextTurns').value = String(typeof s.contextTurns === 'number' ? s.contextTurns : 6);
+  $('f4Enabled').checked = !!s.f4Enabled;
+  $('f4Base').value = s.f4Base || '';
+  $('f4Folder').value = s.f4Folder || '';
 
   renderProfiles();
   renderProfileFields();
@@ -54,6 +58,73 @@ async function init() {
   $('copyPrompt').addEventListener('click', copyPrompt);
   $('captureAll').addEventListener('click', captureAll);
   $('diagBtn').addEventListener('click', runDiag);
+  $('f4Enabled').addEventListener('change', saveFocus4ai);
+  $('f4Base').addEventListener('change', saveFocus4ai);
+  $('f4Folder').addEventListener('change', saveFocus4ai);
+  $('f4Test').addEventListener('click', testFocus4ai);
+}
+
+// ── Focus4ai 知識庫 ───────────────────────────────
+
+function f4Origin() {
+  const raw = $('f4Base').value.trim().replace(/\/+$/, '');
+  if (!raw) return null;
+  try {
+    return new URL(raw).origin;
+  } catch (_) {
+    return null;
+  }
+}
+
+// 使用者填的網址是任意主機，所以權限要當下才要，不預先索取整個網際網路
+function ensureHostPermission(cb) {
+  const origin = f4Origin();
+  if (!origin) {
+    setMsg('f4Msg', 'err', '網址格式不對，要像 http://localhost:8080');
+    return;
+  }
+  chrome.permissions.request({ origins: [`${origin}/*`] }, (granted) => {
+    if (!granted) {
+      setMsg('f4Msg', 'err', '沒有取得存取這個網址的權限，同步無法運作');
+      return;
+    }
+    cb(origin);
+  });
+}
+
+function saveFocus4ai() {
+  const enabled = $('f4Enabled').checked;
+  const base = $('f4Base').value.trim().replace(/\/+$/, '');
+  const folder = $('f4Folder').value.trim() || '00_inbox/mesh-sync';
+  const store = () => chrome.storage.sync.set(
+    { f4Enabled: enabled, f4Base: base, f4Folder: folder },
+    () => {
+      if (chrome.runtime.lastError) {
+        setMsg('f4Msg', 'err', chrome.runtime.lastError.message);
+        return;
+      }
+      setMsg('f4Msg', 'ok', enabled ? '✅ 已啟用同步' : '已關閉同步');
+    },
+  );
+  if (enabled && base) ensureHostPermission(store);
+  else store();
+}
+
+function testFocus4ai() {
+  setMsg('f4Msg', '', '測試中…');
+  ensureHostPermission(async (origin) => {
+    try {
+      const res = await fetch(`${origin}/api/version`);
+      if (!res.ok) {
+        setMsg('f4Msg', 'err', `連得上但回 ${res.status}，確認網址是 Focus4ai 的根位址`);
+        return;
+      }
+      const j = await res.json();
+      setMsg('f4Msg', 'ok', `✅ 連上 Focus4ai${j.version ? ` v${j.version}` : ''}`);
+    } catch (e) {
+      setMsg('f4Msg', 'err', `連不上：${e.message || '請確認服務有在跑'}`);
+    }
+  });
 }
 
 // ── 分頁診斷 ──────────────────────────────────────

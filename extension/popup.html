@@ -145,6 +145,20 @@
 
 <section>
   <div class="row toggle-row">
+    <span>同步到 Focus4ai 知識庫</span>
+    <input type="checkbox" id="f4Enabled">
+  </div>
+  <input type="text" id="f4Base" placeholder="http://localhost:8080 或你的網址" style="margin-top:6px">
+  <input type="text" id="f4Folder" placeholder="00_inbox/mesh-sync" style="margin-top:6px">
+  <div class="row" style="margin-top:6px">
+    <span class="grow hint" style="margin-top:0">寫入後自動切片建索引</span>
+    <button id="f4Test">測試連線</button>
+  </div>
+  <div id="f4Msg" class="msg"></div>
+</section>
+
+<section>
+  <div class="row toggle-row">
     <label class="small">貼進 AI 個人化設定的 PROMPT</label>
     <button id="copyPrompt">複製</button>
   </div>

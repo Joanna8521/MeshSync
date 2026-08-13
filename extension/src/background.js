@@ -102,9 +102,25 @@ function errMsg(e) {
 async function handleCapture(p) {
   try {
     const result = await withAuthRetry((token) => doCapture(token, p));
-    await logEntry({ ok: true, msg: `已寫入「${result.docName}」`, docUrl: result.docUrl, time: Date.now() });
+
+    // 知識庫是附加目的地：失敗只回報，不能讓主功能跟著失敗
+    let f4 = null;
+    let f4Error = '';
+    try {
+      f4 = await syncToFocus4ai(p, result.docName);
+    } catch (e) {
+      f4Error = errMsg(e);
+    }
+
+    const extra = f4 ? `・知識庫 ${f4.chunks} 片` : (f4Error ? `・知識庫失敗：${f4Error}` : '');
+    await logEntry({
+      ok: true,
+      msg: `已寫入「${result.docName}」${extra}`,
+      docUrl: result.docUrl,
+      time: Date.now(),
+    });
     badge(true);
-    return { ok: true, docUrl: result.docUrl, docName: result.docName };
+    return { ok: true, docUrl: result.docUrl, docName: result.docName, f4, f4Error };
   } catch (e) {
     const m = errMsg(e);
     await logEntry({ ok: false, msg: m, time: Date.now() });
@@ -119,6 +135,73 @@ async function doCapture(token, p) {
   const doc = await ensureDoc(token, folderId, profile, p);
   await appendFragment(token, doc.docId, p);
   return { docName: doc.name, docUrl: `https://docs.google.com/document/d/${doc.docId}/edit` };
+}
+
+// ── Focus4ai 知識庫（選用的第二個目的地）──────────────
+// Drive 是給人看的，知識庫是給檢索用的。這條路失敗不能影響主功能，
+// 但要把原因回報出來，不能安靜地什麼都沒發生。
+
+function mdEscape(s) {
+  return String(s || '').replace(/"/g, "'").replace(/\n/g, ' ').trim();
+}
+
+async function syncToFocus4ai(p, docName) {
+  const s = await chrome.storage.sync.get(['f4Enabled', 'f4Base', 'f4Folder']);
+  if (!s.f4Enabled || !s.f4Base) return null;
+
+  const base = String(s.f4Base).replace(/\/+$/, '');
+  const folder = String(s.f4Folder || '00_inbox/mesh-sync').replace(/^\/+|\/+$/g, '');
+  const path = `${folder}/${docName}.md`;
+  const url = `${base}/api/doc?path=${encodeURIComponent(path)}`;
+
+  // 先讀回既有內容，才能累加而不是覆蓋（同一場對話會寫很多次）
+  let existing = '';
+  try {
+    const res = await fetch(`${base}/api/doc?path=${encodeURIComponent(path)}`);
+    if (res.ok) existing = (await res.json()).content || '';
+  } catch (_) { /* 404 或第一次寫入，正常 */ }
+
+  const stamp = dateTimeStr();
+  const srcLabel = { selection: '手動圈選', full: '整場對話', marker: 'AI 標記' }[p.source] || 'AI 標記';
+  const body = cleanText(p.text);
+
+  let out;
+  if (existing) {
+    out = `${existing.replace(/\s*$/, '')}\n\n## ${stamp}・${srcLabel}\n\n${body}\n`;
+  } else {
+    // frontmatter 讓切片器拿得到中繼資料，標題階層讓它有語意邊界可切
+    out = [
+      '---',
+      `title: "${mdEscape(p.title || docName)}"`,
+      `source: "${p.convUrl}"`,
+      `platform: ${p.platform}`,
+      `captured: ${stamp}`,
+      'tags: [mesh-sync, ai-對話脈絡]',
+      '---',
+      '',
+      `# ${p.title || docName}`,
+      '',
+      `原始討論：${p.convUrl}`,
+      '',
+      `## ${stamp}・${srcLabel}`,
+      '',
+      body,
+      '',
+    ].join('\n');
+  }
+
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content: out }),
+  });
+  if (!res.ok) {
+    let detail = '';
+    try { detail = (await res.json()).detail || ''; } catch (_) { /* 非 JSON */ }
+    throw new Error(`Focus4ai ${res.status}：${detail || res.statusText || '寫入失敗'}`);
+  }
+  const j = await res.json();
+  return { path, chunks: j.chunks };
 }
 
 // ── 客戶 profile ─────────────────────────────────────

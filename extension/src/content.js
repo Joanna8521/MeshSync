@@ -322,7 +322,11 @@
         return;
       }
       if (res && res.ok) {
-        showStatusToast(`✅ 已寫入「${res.docName}」・${text.length.toLocaleString()} 字`, res.docUrl, 30000);
+        const f4 = res.f4 ? `・知識庫 ${res.f4.chunks} 片` : (res.f4Error ? `・知識庫失敗：${res.f4Error}` : '');
+        showStatusToast(
+          `✅ 已寫入「${res.docName}」・${text.length.toLocaleString()} 字${f4}`,
+          res.docUrl, 30000,
+        );
       } else {
         showStatusToast(`❌ 寫入失敗：${(res && res.error) || '未知錯誤'}`, null, 8000);
       }
