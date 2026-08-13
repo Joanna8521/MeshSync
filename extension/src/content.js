@@ -199,7 +199,10 @@
   };
 
   function assistantEls() {
-    return [...document.querySelectorAll(SELECTORS[platform])];
+    const all = [...document.querySelectorAll(SELECTORS[platform])];
+    // Gemini 的 model-response 裡面還有 .model-response-text，巢狀命中會讓
+    // 同一段標記被掃兩次。只留最外層那一個。
+    return all.filter((el) => !all.some((other) => other !== el && other.contains(el)));
   }
 
   // 後備：平台改版導致 selector 全部落空時，直接掃整頁文字。
@@ -249,7 +252,9 @@
     while ((m = BLOCK_RE.exec(text)) !== null) {
       const raw = m[2].trim();
       if (!raw) continue;
-      const key = hashStr(`${convUrl()}|${raw}`);
+      // 去重的鍵要忽略空白：串流中與完成後的同一段內容，換行與空格常有出入，
+      // 照原樣算雜湊會被當成兩筆，於是同一個標記跳兩張卡。
+      const key = hashStr(`${convUrl()}|${raw.replace(/\s+/g, '')}`);
       if (seen.has(key)) continue;
       seen.add(key);
       if (isTemplate(raw)) continue;
