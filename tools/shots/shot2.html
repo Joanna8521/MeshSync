@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1280px; height: 800px; overflow: hidden; }
+  body {
+    font-family: -apple-system, "PingFang TC", "Microsoft JhengHei", sans-serif;
+    background: linear-gradient(135deg, #0f766e 0%, #10704a 100%);
+    display: flex;
+    align-items: center;
+    gap: 64px;
+    padding: 0 72px;
+  }
+  .left { color: #fff; flex: 1; }
+  .left h1 { font-size: 40px; line-height: 1.3; letter-spacing: -0.5px; }
+  .left ul { margin-top: 30px; list-style: none; }
+  .left li {
+    font-size: 19px;
+    line-height: 1.6;
+    color: #d1fae5;
+    margin-bottom: 20px;
+    padding-left: 34px;
+    position: relative;
+  }
+  .left li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: #6ee7b7;
+    font-weight: 700;
+  }
+  .left b { color: #fff; }
+
+  /* 以下是擴充實際的 popup 樣式 */
+  .popup {
+    width: 360px;
+    background: #fff;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 24px 60px rgba(0,0,0,.35);
+    font-size: 13px;
+    color: #1f2937;
+    flex-shrink: 0;
+  }
+  .popup header { background: #1e1b3a; color: #fff; padding: 14px 16px; }
+  .popup header h2 { font-size: 16px; }
+  .popup header p { color: #a5b4fc; font-size: 12px; margin-top: 2px; }
+  .popup section { padding: 12px 16px; border-bottom: 1px solid #f3f4f6; }
+  .row { display: flex; align-items: center; gap: 8px; }
+  .grow { flex: 1; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #10704a; display: inline-block; }
+  .small { font-size: 11px; color: #6b7280; letter-spacing: .05em; }
+  .field {
+    width: 100%;
+    padding: 7px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 7px;
+    margin-top: 4px;
+    background: #fff;
+  }
+  .btn {
+    border: 1px solid #d1d5db;
+    background: #fff;
+    border-radius: 7px;
+    padding: 7px 12px;
+    white-space: nowrap;
+  }
+  .primary {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #fff;
+    width: 100%;
+    padding: 9px;
+    font-weight: 700;
+    text-align: center;
+    border-radius: 7px;
+    margin-top: 10px;
+  }
+  .hint { font-size: 11px; color: #9ca3af; margin-top: 4px; }
+  .toggle { justify-content: space-between; }
+  .check {
+    width: 15px; height: 15px; border-radius: 3px; background: #2563eb;
+    color: #fff; font-size: 11px; text-align: center; line-height: 15px;
+  }
+  .logline { padding: 3px 0; border-bottom: 1px dashed #f3f4f6; font-size: 12px; }
+  .logline .t { color: #9ca3af; margin-right: 6px; }
+  .logline a { color: #4f46e5; }
+  footer { text-align: center; color: #9ca3af; font-size: 11px; padding: 10px; }
+</style>
+</head>
+<body>
+  <div class="left">
+    <h1>依客戶切換，<br>各自寫進不同資料夾</h1>
+    <ul>
+      <li><b>一場對話一份 Doc</b>，存幾次都累加在同一份</li>
+      <li><b>檔名自動命名</b>：日期＿主題＿平台</li>
+      <li><b>可調收錄深度</b>：只收摘要，或連整場原文一起寫入</li>
+      <li><b>資料只進你自己的 Drive</b>，本擴充沒有伺服器</li>
+    </ul>
+  </div>
+
+  <div class="popup">
+    <header>
+      <h2>⚡ Mesh Sync</h2>
+      <p>ChatGPT / Claude / Gemini → Google Drive 脈絡 Doc</p>
+    </header>
+
+    <section>
+      <div class="row">
+        <span class="dot"></span>
+        <span class="grow">已連接 Google</span>
+      </div>
+    </section>
+
+    <section>
+      <div class="small">客戶</div>
+      <div class="row" style="margin-top:4px">
+        <div class="field grow">綠色光合 Phytopia ▾</div>
+        <div class="btn">＋</div>
+        <div class="btn">✕</div>
+      </div>
+      <div class="small" style="margin-top:10px">DRIVE 資料夾名稱（此客戶）</div>
+      <div class="field">Mesh Sync — 綠色光合</div>
+      <div class="hint">第一次寫入時會自動在你的雲端硬碟建立這個資料夾。</div>
+      <div class="primary">儲存此客戶設定</div>
+    </section>
+
+    <section>
+      <div class="primary" style="background:#4f46e5;border-color:#4f46e5;margin-top:0">📄 收錄整場對話</div>
+      <div class="hint">把目前分頁的完整問答依序寫入這場對話的 Doc。</div>
+    </section>
+
+    <section>
+      <div class="row toggle">
+        <span>自動偵測 [CONTEXT]/[SYNC] 標記</span>
+        <span class="check">✓</span>
+      </div>
+      <div class="small" style="margin-top:10px">寫入標記時一併收錄對話原文</div>
+      <div class="field">整場對話全文 ▾</div>
+    </section>
+
+    <section>
+      <div class="small">最近寫入</div>
+      <div class="logline"><span class="t">08/13 14:24</span>✅ 已寫入「20260813_品牌定位討論_ChatGPT」 <a>開啟 ↗</a></div>
+      <div class="logline"><span class="t">08/13 14:06</span>✅ 已寫入「20260813_課程架構回顧_Claude」 <a>開啟 ↗</a></div>
+    </section>
+
+    <footer>Mesh Sync v3.0 · 資料只進你自己的 Google Drive</footer>
+  </div>
+</body>
+</html>

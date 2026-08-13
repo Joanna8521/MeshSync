@@ -5,3 +5,6 @@ key.pem
 
 # 打包檔不進版控
 *.zip
+
+# 商店素材（可由 tools/shots 重新產生）
+store_assets/

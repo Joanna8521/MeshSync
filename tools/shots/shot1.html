@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="../../extension/src/toast.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1280px; height: 800px; overflow: hidden; }
+  body {
+    font-family: -apple-system, "PingFang TC", "Microsoft JhengHei", sans-serif;
+    background: linear-gradient(135deg, #1e1b3a 0%, #4f46e5 100%);
+    display: flex;
+    flex-direction: column;
+  }
+  .head { padding: 42px 60px 26px; color: #fff; }
+  .head h1 { font-size: 38px; letter-spacing: -0.5px; }
+  .head p { font-size: 19px; color: #c7d2fe; margin-top: 10px; }
+  .stage {
+    flex: 1;
+    margin: 0 60px 52px;
+    background: #fff;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 24px 60px rgba(0,0,0,.3);
+    position: relative;
+    overflow: hidden;
+    padding: 30px 38px;
+  }
+  .bar { display: flex; gap: 7px; margin-bottom: 24px; }
+  .bar i { width: 11px; height: 11px; border-radius: 50%; background: #e5e7eb; display: block; }
+  .who { font-size: 12px; color: #9ca3af; margin-bottom: 6px; letter-spacing: .08em; }
+  .msg { font-size: 15px; line-height: 1.85; color: #374151; max-width: 700px; margin-bottom: 22px; }
+  .msg.me { background: #eef2ff; border-radius: 12px; padding: 12px 16px; display: inline-block; }
+  .mark { color: #9ca3af; font-family: ui-monospace, Menlo, monospace; font-size: 13px; }
+  /* 卡片在截圖裡固定位置，覆寫 fixed 定位 */
+  .mesh-toast { position: absolute !important; right: 34px; bottom: 30px; max-width: 340px; }
+</style>
+</head>
+<body>
+  <div class="head">
+    <h1>討論到重點時，一鍵存進你自己的 Google Drive</h1>
+    <p>AI 整理出脈絡摘要，擴充偵測到就跳出確認卡，按一下就收好</p>
+  </div>
+
+  <div class="stage">
+    <div class="bar"><i></i><i></i><i></i></div>
+
+    <div class="who">我</div>
+    <div class="msg"><span class="me">記錄脈絡</span></div>
+
+    <div class="who">AI 助理</div>
+    <div class="msg">
+      好的，這段討論的重點我整理如下：<br>
+      <span class="mark">[CONTEXT]<br>
+      {"summary":"以 Mesh 架構重整內容生產流程",<br>
+      &nbsp;"background":"從一次課程回顧延伸出來的設計討論",<br>
+      &nbsp;"key_points":["靈感來自 Mesh WiFi 的無中心路由…"],<br>
+      &nbsp;"decision":"先做最小可用版本再擴充"}<br>
+      [/CONTEXT]</span>
+    </div>
+
+    <div class="mesh-toast mesh-sync">
+      <div class="mesh-toast-title">⚡ Mesh Sync 偵測到脈絡標記</div>
+      <div class="mesh-toast-preview">【總結】以 Mesh 架構重整內容生產流程
+
+【背景】從一次課程回顧延伸出來的設計討論
+
+【重點】
+・靈感來自 Mesh WiFi 的無中心路由，每個節點都能獨立運作
+・先確立通用骨架，再往上填業務邏輯</div>
+      <div class="mesh-toast-plan">＋ 一併收錄對話原文（整場全文）</div>
+      <div class="mesh-toast-actions">
+        <button class="mesh-btn mesh-btn-primary">✅ 寫入脈絡 Doc</button>
+        <button class="mesh-btn">略過</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1280px; height: 800px; overflow: hidden; }
+  body {
+    font-family: -apple-system, "PingFang TC", "Microsoft JhengHei", sans-serif;
+    background: linear-gradient(135deg, #312e81 0%, #6d28d9 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .head { color: #fff; text-align: center; padding: 40px 0 26px; }
+  .head h1 { font-size: 36px; letter-spacing: -0.5px; }
+  .head p { font-size: 18px; color: #ddd6fe; margin-top: 10px; }
+
+  .paper {
+    width: 780px;
+    flex: 1;
+    background: #fff;
+    border-radius: 10px 10px 0 0;
+    box-shadow: 0 24px 60px rgba(0,0,0,.35);
+    padding: 44px 62px;
+    overflow: hidden;
+    color: #202124;
+  }
+  .doc-title { font-size: 27px; font-weight: 400; letter-spacing: -0.3px; }
+  .doc-meta { font-size: 13px; color: #5f6368; margin: 8px 0 30px; }
+  .stamp { font-size: 15px; color: #444746; margin: 22px 0 8px; }
+  .body { font-size: 14px; line-height: 1.85; }
+  .body .lbl { font-weight: 700; }
+  .body p { margin-bottom: 12px; }
+  .footer-mark { color: #5f6368; letter-spacing: .12em; margin-top: 26px; font-size: 13px; }
+  .link { color: #1a73e8; text-decoration: underline; font-size: 13px; word-break: break-all; }
+  .tag {
+    display: inline-block;
+    background: #e8f0fe;
+    color: #1967d2;
+    border-radius: 4px;
+    font-size: 11px;
+    padding: 1px 7px;
+    margin-left: 8px;
+    vertical-align: 2px;
+  }
+</style>
+</head>
+<body>
+  <div class="head">
+    <h1>寫進 Doc 的樣子：摘要、原文、原始連結</h1>
+    <p>同一場對話存幾次都累加在同一份文件，各自標上時間</p>
+  </div>
+
+  <div class="paper">
+    <div class="doc-title">品牌定位討論</div>
+    <div class="doc-meta">ChatGPT・建立於 2026-08-13 14:01</div>
+
+    <div class="stamp">🕐 2026-08-13 14:01・AI 標記</div>
+    <div class="body">
+      <p><span class="lbl">【總結】</span>以 Mesh 架構重整內容生產流程，先做最小可用版本</p>
+      <p><span class="lbl">【重點】</span><br>
+        ・靈感來自 Mesh WiFi 的無中心路由，每個節點都能獨立運作，沒有單點失敗<br>
+        ・先確立通用骨架再往上填業務邏輯，換產業只需要換掉業務層</p>
+      <p><span class="lbl">【決定】</span>先做最小可用版本再擴充</p>
+    </div>
+
+    <div class="stamp">🕐 2026-08-13 14:24・整場對話 <span class="tag">逐字紀錄</span></div>
+    <div class="body">
+      <p>👤 我：<br>總結一下這個工具是怎樣的定位？</p>
+      <p>🤖 ChatGPT：<br>它不是筆記軟體，而是「討論當下的收納動作」…</p>
+    </div>
+
+    <div class="footer-mark">━━━━ 原始討論連結 ━━━━</div>
+    <div class="link">https://chatgpt.com/c/6a7d52d9-f5d8-83e8-a3cb-af4a16379b61</div>
+  </div>
+</body>
+</html>
