@@ -46,10 +46,15 @@ quotes 摘錄我原話裡最關鍵的句子。
 
 ## 安裝（學員／一般使用者）
 
-1. 下載本專案（Code → Download ZIP，解壓縮）。
+拿 `mesh-sync-local-v*.zip`（由 `python3 tools/build_local_zip.py` 產生，
+內含安裝說明），或直接下載本專案原始碼：
+
+1. 解壓縮後會看到 `mesh-sync-extension` 資料夾。
 2. 打開 `chrome://extensions`，右上角開啟「開發人員模式」。
-3. 按「載入未封裝項目」，選取 `extension/` 資料夾。
+3. 按「載入未封裝項目」，選取那個資料夾（裡面要看得到 `manifest.json`）。
 4. 點擴充圖示 → 「連接 Google」→ 用自己的 Google 帳號登入授權。
+
+安裝後不要刪除或搬移該資料夾，擴充是直接從那裡執行的。
 
 manifest 內含固定的 `key`（公鑰），所以每個人載入後的擴充 ID 都相同：
 `mgeigmfkagbfbgngheecjlcdiemajpdg`，共用同一個 OAuth client 才會成立。
