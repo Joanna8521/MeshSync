@@ -145,11 +145,13 @@
 
 <section>
   <div class="row toggle-row">
-    <span>同步到 Focus4ai 知識庫</span>
+    <span class="grow">同步到
+      <a href="https://focus4ai.com" target="_blank" rel="noopener">Focus4ai 知識庫</a>，並自動 RAG</span>
     <input type="checkbox" id="f4Enabled">
   </div>
   <input type="text" id="f4Base" placeholder="https://app.focus4ai.com 或 http://localhost:8000" style="margin-top:6px">
-  <div class="hint">線上站台已填好，自架的改成 http://localhost:8000</div>
+  <div class="hint">線上站台已填好（需先登入），自架的改成 http://localhost:8000。
+    還沒有知識庫？<a href="https://focus4ai.com" target="_blank" rel="noopener">看看 Focus4ai</a></div>
   <input type="text" id="f4Folder" placeholder="00_inbox/mesh-sync" style="margin-top:6px">
   <div class="row toggle-row" style="margin-top:8px">
     <span class="small">標為 local_only（不送外部模型）</span>
