@@ -23,35 +23,29 @@ FOLDER = "mesh-sync-extension"
 # 常常忽略它、改用系統編碼，中文檔名就變成亂碼。內容仍然是中文。
 GUIDE_NAME = "INSTALL.txt"
 
-GUIDE = """Mesh Sync 安裝說明（三分鐘）
+README = ROOT / "README.md"
+MARK_START = "<!-- INSTALL:START -->"
+MARK_END = "<!-- INSTALL:END -->"
 
-1. 把這個資料夾放到你放得住的地方（例如「文件」）。
-   注意：安裝後不能刪除或搬走它，擴充是直接從這個資料夾執行的。
 
-2. 打開 Chrome，網址列輸入：chrome://extensions
-   右上角把「開發人員模式」打開。
+def guide_text() -> str:
+    """安裝說明只有一份來源：README 的安裝章節。
 
-3. 按左上角「載入未封裝項目」，選取這個資料夾（裡面要看得到
-   manifest.json 這個檔案），按「選取」。
-
-4. 裝好後會自動打開設定導覽頁，照著做兩件事：
-   （一）點工具列的 Mesh Sync 圖示，按「連接 Google」，用自己的
-        Google 帳號授權。你的內容只會寫進你自己的雲端硬碟。
-   （二）把導覽頁上那段 prompt 複製，貼到 ChatGPT 自訂指令
-        （或 Claude 個人偏好、Gemini Saved Info）。
-
-5. 開一個 AI 對話，選取任一段文字，旁邊會浮出「⚡ 存入脈絡」，
-   按下去就寫進你的 Google Drive 了。
-
-常見問題
-
-・選了資料夾卻說「資訊清單檔案遺失」→ 選錯層了，要選到裡面有
-  manifest.json 的那一層。
-・按了沒反應 → 回到對話分頁按 Cmd+R（Windows 是 F5）重新整理，
-  擴充需要頁面重新載入才會生效。
-・想確認有沒有正常運作 → 點擴充圖示，按「檢查」，會顯示這個分頁
-  偵測到幾則訊息。
-"""
+    複製一份放這裡的話，改了 README 而忘了改這裡，學員拿到的就是舊步驟，
+    而且沒有任何跡象顯示它過期了。
+    """
+    md = README.read_text(encoding="utf-8")
+    body = md.split(MARK_START)[1].split(MARK_END)[0].strip()
+    # 轉成純文字：拿掉 Markdown 的標記，保留階層感
+    out = []
+    for line in body.split("\n"):
+        line = line.replace("**", "").replace("`", "")
+        if line.startswith("### "):
+            line = f"\n【{line[4:].strip()}】"
+        elif line.startswith("- "):
+            line = f"・{line[2:]}"
+        out.append(line)
+    return "Mesh Sync 安裝說明（三分鐘）\n\n" + "\n".join(out).strip() + "\n"
 
 
 def main():
@@ -65,7 +59,7 @@ def main():
     with tempfile.TemporaryDirectory() as tmp:
         stage = Path(tmp) / FOLDER
         shutil.copytree(SRC, stage, ignore=shutil.ignore_patterns(".*", "__MACOSX"))
-        (Path(tmp) / GUIDE_NAME).write_text(GUIDE, encoding="utf-8")
+        (Path(tmp) / GUIDE_NAME).write_text(guide_text(), encoding="utf-8")
 
         with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
             for path in sorted(Path(tmp).rglob("*")):
